@@ -59,6 +59,7 @@ target_sources(riscv-interpreter
         FILES
             "${RISCV_ENCODING_HEADER}"
             "${SOURCE_DIR}/instructions.hh"
+            "${SOURCE_DIR}/bits.hh"
 )
 target_compile_features(riscv-interpreter PRIVATE cxx_std_20)
 target_compile_options(riscv-interpreter PRIVATE -Werror -Wall -Wextra -Wpedantic)

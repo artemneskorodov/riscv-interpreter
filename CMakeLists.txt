@@ -29,6 +29,7 @@ add_custom_command(
         --project "${RISCV_OPCODES_DIR}"
         --locked
         riscv_opcodes
+        -c
         rv_i
         rv32_i
 
@@ -71,6 +72,55 @@ add_custom_command(
 )
 
 #
+# Adding spdlog subdirectory
+#
+add_subdirectory(3rd/spdlog)
+
+#
+# Debug level
+#
+set(RISCV_DIAGNOSTICS_LEVEL "DEBUG" CACHE STRING "Compile-time diagnostics level")
+set_property(
+    CACHE RISCV_DIAGNOSTICS_LEVEL
+    PROPERTY STRINGS
+        TRACE
+        DEBUG
+        INFO
+        WARNING
+        ERROR
+        CRITICAL
+        OFF
+)
+string(TOUPPER "${RISCV_DIAGNOSTICS_LEVEL}" RISCV_DIAGNOSTICS_LEVEL)
+
+if(RISCV_DIAGNOSTICS_LEVEL STREQUAL "TRACE")
+    set(RVI_SPDLOG_LEVEL SPDLOG_LEVEL_TRACE)
+    set(RVI_DEBUG_ENABLED 1)
+elseif(RISCV_DIAGNOSTICS_LEVEL STREQUAL "DEBUG")
+    set(RVI_SPDLOG_LEVEL SPDLOG_LEVEL_DEBUG)
+    set(RVI_DEBUG_ENABLED 1)
+elseif(RISCV_DIAGNOSTICS_LEVEL STREQUAL "INFO")
+    set(RVI_SPDLOG_LEVEL SPDLOG_LEVEL_INFO)
+    set(RVI_DEBUG_ENABLED 0)
+elseif(RISCV_DIAGNOSTICS_LEVEL STREQUAL "WARNING")
+    set(RVI_SPDLOG_LEVEL SPDLOG_LEVEL_WARN)
+    set(RVI_DEBUG_ENABLED 0)
+elseif(RISCV_DIAGNOSTICS_LEVEL STREQUAL "ERROR")
+    set(RVI_SPDLOG_LEVEL SPDLOG_LEVEL_ERROR)
+    set(RVI_DEBUG_ENABLED 0)
+elseif(RISCV_DIAGNOSTICS_LEVEL STREQUAL "CRITICAL")
+    set(RVI_SPDLOG_LEVEL SPDLOG_LEVEL_CRITICAL)
+    set(RVI_DEBUG_ENABLED 0)
+elseif(RISCV_DIAGNOSTICS_LEVEL STREQUAL "OFF")
+    set(RVI_SPDLOG_LEVEL SPDLOG_LEVEL_OFF)
+    set(RVI_DEBUG_ENABLED 0)
+else()
+    message(FATAL_ERROR "Unknown RISCV_DIAGNOSTICS_LEVEL: " "${RISCV_DIAGNOSTICS_LEVEL}")
+endif()
+
+message(STATUS "Building with diagnostics level: " "${RISCV_DIAGNOSTICS_LEVEL}")
+
+#
 # Building riscv-interpreter target
 #
 set(SOURCE_DIR "${PROJECT_SOURCE_DIR}/sources")
@@ -95,3 +145,7 @@ target_sources(riscv-interpreter
 )
 target_compile_features(riscv-interpreter PRIVATE cxx_std_20)
 target_compile_options(riscv-interpreter PRIVATE -Werror -Wall -Wextra -Wpedantic)
+target_link_libraries(riscv-interpreter PRIVATE spdlog::spdlog)
+target_compile_definitions(riscv-interpreter PRIVATE
+    SPDLOG_ACTIVE_LEVEL=${RVI_SPDLOG_LEVEL}
+    RVI_DEBUG_ENABLED=${RVI_DEBUG_ENABLED})

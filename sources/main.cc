@@ -1,14 +1,11 @@
 #include <iostream>
 
 #include "instructions.hh"
+#include "cpu_model.hh"
 
 int
 main( int /*argc*/,
       const char* /*argv*/[])
 {
-    for ( auto elem : riscv::isa::kEncodings )
-    {
-        std::cout << elem.name << std::endl;
-    }
-    return 0;
+    riscv::CPUModel cpu_model{};
 }

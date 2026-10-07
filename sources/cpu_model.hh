@@ -4,8 +4,8 @@
 #include <cstddef>
 #include <cstdint>
 #include <cassert>
+#include <cstring>
 #include <memory>
-#include <span>
 
 namespace riscv
 {
@@ -46,25 +46,29 @@ public:
         pc_ = value;
     }
 
-    std::span<std::byte>
-    getMemoryRegion( uint32_t offset,
-                     uint32_t size)
+    void
+    store( uint32_t offset,
+           uint32_t size,
+           const void* data)
     {
-        assert( offset + size <= kMemorySize);
-        return std::span<std::byte>( memory_.get() + offset, size);
+        assert( offset <= kMemorySize);
+        assert( size <= kMemorySize - offset);
+        std::memcpy( memory_.get() + offset, data, size);
     }
 
-    std::span<const std::byte>
-    getMemoryRegion( uint32_t offset,
-                     uint32_t size) const
+    void
+    load( uint32_t offset,
+          uint32_t size,
+          void* data)
     {
-        assert( offset + size <= kMemorySize);
-        return std::span<const std::byte>( memory_.get() + offset, size);
+        assert( offset <= kMemorySize);
+        assert( size <= kMemorySize - offset);
+        std::memcpy( data, memory_.get() + offset, size);
     }
 
 private:
-    uint32_t x_[kProgrammerRegistersNumber];
-    uint32_t pc_;
+    uint32_t x_[kProgrammerRegistersNumber]{};
+    uint32_t pc_ = 0;
     std::unique_ptr<std::byte[]> memory_ = std::make_unique<std::byte[]>( kMemorySize);
 
 };

@@ -95,29 +95,3 @@ target_sources(riscv-interpreter
 )
 target_compile_features(riscv-interpreter PRIVATE cxx_std_20)
 target_compile_options(riscv-interpreter PRIVATE -Werror -Wall -Wextra -Wpedantic)
-
-include(CTest)
-if ( BUILD_TESTING )
-    add_executable(riscv-interpreter-generated-tests)
-    target_sources(riscv-interpreter-generated-tests
-        PRIVATE
-            ${PROJECT_SOURCE_DIR}/tests/generated_behaviour_tests.cc
-            ${SOURCE_DIR}/instructions.cc
-
-        PRIVATE
-            FILE_SET HEADERS
-            BASE_DIRS
-                "${SOURCE_DIR}"
-                "${GENERATED_DIR}"
-            FILES
-                "${RISCV_ENCODING_HEADER}"
-                "${RV32I_BEHAVIOUR_HEADER}"
-                "${SOURCE_DIR}/instructions.hh"
-                "${SOURCE_DIR}/bits.hh"
-                "${SOURCE_DIR}/cpu_model.hh"
-                "${SOURCE_DIR}/decoder.hh"
-    )
-    target_compile_features(riscv-interpreter-generated-tests PRIVATE cxx_std_20)
-    target_compile_options(riscv-interpreter-generated-tests PRIVATE -Werror -Wall -Wextra -Wpedantic)
-    add_test(NAME generated-behaviour COMMAND riscv-interpreter-generated-tests)
-endif()

@@ -127,8 +127,9 @@ set(SOURCE_DIR "${PROJECT_SOURCE_DIR}/sources")
 add_executable(riscv-interpreter)
 target_sources(riscv-interpreter
     PRIVATE
-        ${SOURCE_DIR}/main.cc
-        ${SOURCE_DIR}/instructions.cc
+        "${SOURCE_DIR}/main.cc"
+        "${SOURCE_DIR}/instructions.cc"
+        "${SOURCE_DIR}/memory.cc"
 
     PRIVATE
         FILE_SET HEADERS
@@ -142,6 +143,9 @@ target_sources(riscv-interpreter
             "${SOURCE_DIR}/bits.hh"
             "${SOURCE_DIR}/cpu_model.hh"
             "${SOURCE_DIR}/decoder.hh"
+            "${SOURCE_DIR}/memory.hh"
+            "${SOURCE_DIR}/debug.hh"
+            "${SOURCE_DIR}/errors.hh"
 )
 target_compile_features(riscv-interpreter PRIVATE cxx_std_20)
 target_compile_options(riscv-interpreter PRIVATE -Werror -Wall -Wextra -Wpedantic)

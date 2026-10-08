@@ -3,16 +3,18 @@
 
 #include <string>
 #include <variant>
-#include <cassert>
 
 #include "spdlog/spdlog.h"
+
+#include "debug.hh"
 
 namespace riscv
 {
 
 enum class ErrorCode
 {
-
+    MemoryRegionsOverlap,
+    InvalidMemoryAccess,
 };
 
 struct Error
@@ -39,7 +41,7 @@ public:
     value() &
     {
         T* value = std::get_if<T>( data_);
-        assert( value != nullptr);
+        RVI_ASSERT( value != nullptr);
         return *value;
     }
 
@@ -47,7 +49,7 @@ public:
     value() const &
     {
         const T* value = std::get_if<T>( data_);
-        assert( value != nullptr);
+        RVI_ASSERT( value != nullptr);
         return *value;
     }
 
@@ -55,7 +57,7 @@ public:
     error() &
     {
         Error* error = std::get_if<Error>( data_);
-        assert( error != nullptr);
+        RVI_ASSERT( error != nullptr);
         return *error;
     }
 
@@ -63,12 +65,45 @@ public:
     error() const &
     {
         const Error* error = std::get_if<Error>( data_);
-        assert( error != nullptr);
+        RVI_ASSERT( error != nullptr);
         return *error;
     }
 
 private:
     std::variant<T, Error> data_;
+
+};
+
+template<>
+class Expected<void>
+{
+public:
+    Expected()
+        : data_( std::nullopt)
+    {}
+
+    Expected( Error error)
+        : data_( std::move( error))
+    {}
+
+    bool ok() const { return !data_.has_value(); }
+
+    Error&
+    error() &
+    {
+        RVI_ASSERT( data_.has_value());
+        return *data_;
+    }
+
+    const Error&
+    error() const &
+    {
+        RVI_ASSERT( data_.has_value());
+        return *data_;
+    }
+
+private:
+    std::optional<Error> data_;
 
 };
 

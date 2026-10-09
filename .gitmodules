@@ -4,6 +4,3 @@
 [submodule "3rd/spdlog"]
 	path = 3rd/spdlog
 	url = https://github.com/gabime/spdlog.git
-[submodule "3rd/ELFIO"]
-	path = 3rd/ELFIO
-	url = https://github.com/serge1/ELFIO.git

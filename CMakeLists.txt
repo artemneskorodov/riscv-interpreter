@@ -72,10 +72,13 @@ add_custom_command(
 )
 
 #
-# Debug and diagnostics
+# Adding spdlog subdirectory
 #
 add_subdirectory(3rd/spdlog)
 
+#
+# Debug level
+#
 set(RISCV_DIAGNOSTICS_LEVEL "DEBUG" CACHE STRING "Compile-time diagnostics level")
 set_property(
     CACHE RISCV_DIAGNOSTICS_LEVEL
@@ -118,15 +121,6 @@ endif()
 message(STATUS "Building with diagnostics level: " "${RISCV_DIAGNOSTICS_LEVEL}")
 
 #
-# Including ELFIO
-#
-add_subdirectory(
-    "${PROJECT_SOURCE_DIR}/3rd/ELFIO"
-    "${PROJECT_BINARY_DIR}/3rd/ELFIO"
-    EXCLUDE_FROM_ALL
-)
-
-#
 # Building riscv-interpreter target
 #
 set(SOURCE_DIR "${PROJECT_SOURCE_DIR}/sources")
@@ -153,9 +147,9 @@ target_sources(riscv-interpreter
             "${SOURCE_DIR}/debug.hh"
             "${SOURCE_DIR}/errors.hh"
 )
-target_compile_features(riscv-interpreter PRIVATE cxx_std_23)
+target_compile_features(riscv-interpreter PRIVATE cxx_std_20)
 target_compile_options(riscv-interpreter PRIVATE -Werror -Wall -Wextra -Wpedantic)
-target_link_libraries(riscv-interpreter PRIVATE spdlog::spdlog elfio::elfio)
+target_link_libraries(riscv-interpreter PRIVATE spdlog::spdlog)
 target_compile_definitions(riscv-interpreter PRIVATE
     SPDLOG_ACTIVE_LEVEL=${RVI_SPDLOG_LEVEL}
     RVI_DEBUG_ENABLED=${RVI_DEBUG_ENABLED})

@@ -26,6 +26,8 @@ jal:
 jalr:
 lb:
 lbu:
+    x[rd] = mem8[x[rs1] + sx(immI)]
+
 lh:
 lhu:
 lui:

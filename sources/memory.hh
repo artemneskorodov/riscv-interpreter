@@ -78,17 +78,27 @@ concept MemoryAccessType = std::same_as<T, uint8_t>
 class Memory
 {
 public:
-    Expected<void> allocate( uint32_t base, uint32_t size, MemoryPermissions permissions);
+    Expected<void> allocate( uint32_t base,
+                             uint32_t size,
+                             MemoryPermissions permissions,
+                             const void* load,
+                             std::size_t load_size);
 
-    Expected<uint8_t>  load8(  uint32_t addr) { return loadImpl<uint8_t>( addr); }
-    Expected<uint16_t> load16( uint32_t addr) { return loadImpl<uint16_t>( addr); }
-    Expected<uint32_t> load32( uint32_t addr) { return loadImpl<uint32_t>( addr); }
+    template<MemoryAccessType T>
+    Expected<T>
+    load( uint32_t addr)
+    {
+        return loadImpl<T>( addr);
+    }
 
     Expected<uint32_t> loadExecutable( uint32_t addr) { return loadImpl<uint32_t>( addr, true); }
 
-    Expected<void> store8(  uint32_t addr, uint8_t  value) { return storeImpl<uint8_t>( addr, value); }
-    Expected<void> store16( uint32_t addr, uint16_t value) { return storeImpl<uint16_t>( addr, value); }
-    Expected<void> store32( uint32_t addr, uint32_t value) { return storeImpl<uint32_t>( addr, value); }
+    template<MemoryAccessType T>
+    Expected<void>
+    store( uint32_t addr, T value)
+    {
+        return storeImpl<T>( addr, value);
+    }
 
 private:
     MemoryRegion* findRegion( uint32_t addr, uint32_t size);

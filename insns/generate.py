@@ -99,7 +99,11 @@ class CppEmitter:
         "immU": "U",
         "immJ": "J",
     }
-    _MEMORIES = {"mem8": "uint8_t", "mem16": "uint16_t", "mem32": "uint32_t"}
+    _SUPPORTED_MEMORIES = {
+        "mem8": "uint8_t",
+        "mem16": "uint16_t",
+        "mem32": "uint32_t"
+    }
 
     def __init__(self):
         self.temporary_index = 0
@@ -128,14 +132,18 @@ class CppEmitter:
             index = self.emit_expression(node.slice, prelude)
             if node.value.id == "x":
                 return f"cpu_model.getX({index})"
-            value_type = self._MEMORIES.get(node.value.id)
-            if value_type is None:
+            value_type = self._SUPPORTED_MEMORIES.get(node.value.id)
+            if not value_type:
                 raise RuntimeError(f"Unknown subscript base {node.value.id}")
             tmp_name = f"tmp_{self.temporary_index}"
             self.temporary_index += 1
-            prelude.append(f"{value_type} {tmp_name} = 0;")
-            prelude.append(f"cpu_model.load( {index}, sizeof( {tmp_name}), &{tmp_name})")
-            return temporary
+            prelude.extend([
+               f"Expected<{value_type}> {tmp_name} = cpu_model.memory().load<{value_type}>( {index});",
+               f"if ( !{tmp_name}.ok() )",
+                "{",
+                "    // TODO handle error",
+                "}"])
+            return f"{tmp_name}.value()"
 
         if isinstance(node, ast.BinOp):
             sym = self._BINARY_OPERATORS.get(type(node.op))
@@ -154,12 +162,12 @@ class CppEmitter:
 
         if isinstance(node, ast.Compare):
             if len(node.ops) != 1 or len(node.comparators) != 1:
-                raise self.fail(line, "chained comparisons are not supported")
+                raise RuntimeError("Chained comparisons are not supported")
             symbol = self._COMPARE_OPERATORS.get(type(node.ops[0]))
             if symbol is None:
-                raise self.fail(line, "unsupported comparison operator")
-            left = self.emit_expression(node.left, line, prelude)
-            right = self.emit_expression(node.comparators[0], line, prelude)
+                raise RuntimeError(f"Unsupported comparison operation: {node.ops[0]}")
+            left = self.emit_expression(node.left, prelude)
+            right = self.emit_expression(node.comparators[0], prelude)
             return f"({left} {symbol} {right})"
 
         if isinstance(node, ast.Call):
@@ -196,13 +204,10 @@ class CppEmitter:
             index = self.emit_expression(target.slice, prelude)
             if target.value.id == "x":
                 return prelude + [f"cpu_model.setX( {index}, {value});"]
-            value_type = self._MEMORIES.get(target.value.id)
+            value_type = self._SUPPORTED_MEMORIES.get(target.value.id)
             if not value_type:
                 raise RuntimeError(f"TODO error")
-            tmp_name = f"tmp_{self.temporary_index}"
-            self.temporary_index += 1
-            prelude.append(f"{value_type} {tmp_name} = static_cast<{value_type}>( {value});")
-            prelude.append(f"cpu_model.store( {index}, sizeof( {tmp_name}), &{tmp_name})")
+            prelude.append(f"cpu_model.memory().store<{value_type}>( {index}, {value})")
             return prelude
         else:
             raise RuntimeError(f"TODO error")
@@ -230,7 +235,7 @@ def generate(definitions: list[InstructionDefinition], source_name: str) -> str:
     emitter = CppEmitter()
     lines = [
         "//",
-        f"// This file is generated using {__file__} from {source_name}.",
+       f"// This file is generated using {__file__} from {source_name}.",
         "//",
         "#ifndef RISCV_INTERPRETER_RV32I_BEHAVIOR_GENERATED_HH__",
         "#define RISCV_INTERPRETER_RV32I_BEHAVIOR_GENERATED_HH__",

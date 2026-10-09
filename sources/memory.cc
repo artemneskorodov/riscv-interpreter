@@ -10,8 +10,11 @@ namespace mem
 Expected<void>
 Memory::allocate( uint32_t base,
                   uint32_t size,
-                  MemoryPermissions permissions)
+                  MemoryPermissions permissions,
+                  const void* load,
+                  std::size_t load_size)
 {
+    RVI_ASSERT( load_size <= size);
     for ( const MemoryRegion& region : memory_regions_ )
     {
         if ( region.overlaps( base, size) )
@@ -26,6 +29,10 @@ Memory::allocate( uint32_t base,
     }
 
     memory_regions_.emplace_back( base, size, permissions);
+    if ( (load != nullptr) && (load_size != 0) )
+    {
+        std::memcpy( memory_regions_.back().data.get(), load, load_size);
+    }
     return Expected<void>();
 }
 

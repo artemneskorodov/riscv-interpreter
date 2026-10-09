@@ -14,7 +14,12 @@ void
 runSingleInstruction( CPUModel& cpu_model)
 {
     isa::InstructionBits bits = 0;
-    cpu_model.load( cpu_model.getPC(), sizeof( bits), &bits);
+    auto load_bits = cpu_model.memory().loadExecutable( cpu_model.getPC());
+    if ( !load_bits.ok() )
+    {
+        std::cout << "Error while load instruction: " << load_bits.error().message << std::endl;
+        return ;
+    }
 
     auto encoding = isa::matchInstruction( bits);
     if ( !encoding )

@@ -15,6 +15,13 @@ enum class ErrorCode
 {
     MemoryRegionsOverlap,
     InvalidMemoryAccess,
+    ElfClassUnexpected,
+    ElfEncodingUnexpected,
+    ElfMachineUnexpected,
+    ElfTypeUnexpected,
+    ElfVersionUnexpected,
+    ElfSegmentTypeUnexpected,
+    ElfOpenFailed,
 };
 
 struct Error

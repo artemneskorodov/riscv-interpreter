@@ -12,7 +12,11 @@ namespace riscv
 namespace elf
 {
 
-Expected<void> loadElfFile( mem::Memory& memory, const std::string& elf_filename);
+//
+// Loads ELF file to memory.
+// Returns entry point on success.
+//
+Expected<uint32_t> loadElfFile( mem::Memory& memory, const std::string& elf_filename);
 
 } // ! namespace elf
 } // ! namespace riscv

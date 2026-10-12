@@ -1,28 +1,27 @@
 # Instruction behavior DSL
 
-## Run instructions definition generator
-```sh
-python3 insns/generate.py insns/rv32i.insn output.hh
-```
+Instruction definitions DSL use python syntax.
+Every statement in definition body must be assignment or if statements.
 
-## Instruction behavior is declared with pattern
-```text
-[name]:
-    [statement_1]
-    [statement_2]
-    ...
-    [statement_n]
-```
+## Values and assignment targets
 
-## Statements must be assignment operations
-```text
-[target] = [expression]
-```
-Expressions are default python ast module supported operations. Supported generator operations are listed in `generate.py`
+- `x[index]` reads or writes a programmer register. The index can use `rd`,
+  `rs1`, `rs2`, an integer, or an expression.
+- `pc` reads or writes the program counter.
+- `mem8[address]`, `mem16[address]`, and `mem32[address]` read or write memory.
+  Generated code checks the memory operation and stops the instruction on an
+  error.
+- `immI`, `immS`, `immB`, `immU`, and `immJ` are unsigned instruction
+  immediates. `sx(immX)` reads the same immediate with sign extension.
+- Assigning to any other name creates a 32-bit local.
 
-## Values and targets
-- `x[index]` - access to programmer register. Index can be `rd`, `rs1`, `rs2`, integer or expression.
-- `pc` - access to program counter
-- `(mem8, mem16, mem32)[address]` - access to memory. The `mem8`, `mem16` or `mem32` defines the access width.
-- `immI`, `immS`, `immB`, `immU` and `immJ` select an instruction immediate.
-- `sx(immX)` - sign extent of underlying value. The immediate width is defined by `X-Type`
+## Expressions
+
+The generator supports integer arithmetic, shifts, bitwise operators,
+comparisons, `and`, `or` and `not`.
+
+For clarity and correct short-circuit behavior, memory reads inside `and`,
+`or`, or conditional expressions are rejected. Use an `if` statement instead.
+
+Generator errors include the source filename, line, and column so malformed or
+unsupported definitions can be fixed at the declaration site.

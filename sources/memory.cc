@@ -83,6 +83,10 @@ Memory::loadImpl( uint32_t addr,
     return value;
 }
 
+template Expected<uint8_t> Memory::loadImpl<uint8_t>( uint32_t , bool );
+template Expected<uint16_t> Memory::loadImpl<uint16_t>( uint32_t , bool );
+template Expected<uint32_t> Memory::loadImpl<uint32_t>( uint32_t , bool );
+
 template<MemoryAccessType T>
 Expected<void>
 Memory::storeImpl( uint32_t addr, T value)
@@ -102,9 +106,13 @@ Memory::storeImpl( uint32_t addr, T value)
                                    addr, addr + sizeof( T)));
     }
 
-    std::memcpy( region->data().get() + addr, &value, sizeof( value));
+    std::memcpy( region->data.get() + addr, &value, sizeof( value));
     return Expected<void>();
 }
+
+template Expected<void> Memory::storeImpl<uint8_t>( uint32_t , uint8_t );
+template Expected<void> Memory::storeImpl<uint16_t>( uint32_t , uint16_t );
+template Expected<void> Memory::storeImpl<uint32_t>( uint32_t , uint32_t );
 
 } // ! namespace mem
 } // ! namespace riscv

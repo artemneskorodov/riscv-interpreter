@@ -2,13 +2,14 @@
 #define RISCV_INTERPRETER_INSTRUCTIONS_HH__
 
 #include "cpu_model.hh"
+#include "errors.hh"
 
 namespace riscv
 {
 namespace insn
 {
 
-void runSingleInstruction( CPUModel& cpu_model);
+Expected<void> runSingleInstruction( CPUModel& cpu_model);
 
 } // ! namespace insn
 } // ! namespace riscv

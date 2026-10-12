@@ -71,7 +71,7 @@ parseProgramHeader( const ELFIO::segment& segment)
 
 } // ! anonymous namespace
 
-Expected<void>
+Expected<uint32_t>
 loadElfFile( mem::Memory& memory,
              const std::string& elf_filename)
 {
@@ -103,7 +103,6 @@ loadElfFile( mem::Memory& memory,
     for ( const std::unique_ptr<ELFIO::segment>& segment_ptr : elf.segments )
     {
         const ELFIO::segment& segment = *segment_ptr;
-        ELFIO::Elf_Word p_type = segment.get_type();
 
         auto segment_r = parseProgramHeader( segment);
         if ( !segment_r.ok() )
@@ -128,7 +127,7 @@ loadElfFile( mem::Memory& memory,
         }
     }
 
-    return Expected<void>();
+    return entry;
 }
 
 } // ! namespace elf

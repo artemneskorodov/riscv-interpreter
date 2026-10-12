@@ -136,6 +136,7 @@ target_sources(riscv-interpreter
         "${SOURCE_DIR}/main.cc"
         "${SOURCE_DIR}/instructions.cc"
         "${SOURCE_DIR}/memory.cc"
+        "${SOURCE_DIR}/elf_loader.cc"
 
     PRIVATE
         FILE_SET HEADERS

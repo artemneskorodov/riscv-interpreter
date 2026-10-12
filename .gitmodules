@@ -7,3 +7,6 @@
 [submodule "3rd/ELFIO"]
 	path = 3rd/ELFIO
 	url = https://github.com/serge1/ELFIO.git
+[submodule "3rd/riscv-interpreter-tests"]
+	path = 3rd/riscv-interpreter-tests
+	url = https://gitlab.com/iDang3r/riscv-interpreter-task.git

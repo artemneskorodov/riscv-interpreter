@@ -36,6 +36,42 @@ Memory::allocate( uint32_t base,
     return Expected<void>();
 }
 
+void
+Memory::loadTrusted( uint32_t addr,
+                     uint32_t size,
+                     void* data)
+{
+    MemoryRegion* region = findRegion( addr, size);
+    RVI_ASSERT( region != nullptr);
+    RVI_ASSERT( (region->permissions.Read()) != 0);
+
+    std::memcpy( data, region->data.get() + addr - region->base, size);
+}
+
+void
+Memory::storeTrusted( uint32_t addr,
+                      uint32_t size,
+                      const void* data)
+{
+    MemoryRegion* region = findRegion( addr, size);
+    RVI_ASSERT( region != nullptr);
+    RVI_ASSERT( (region->permissions.Write()) != 0);
+
+    std::memcpy( region->data.get() + addr - region->base, data, size);
+}
+
+std::vector<std::pair<uint32_t, uint32_t>>
+Memory::getCommitedRanges() const
+{
+    std::vector<std::pair<uint32_t, uint32_t>> ranges{};
+    ranges.reserve( memory_regions_.size());
+    for ( const MemoryRegion& region : memory_regions_ )
+    {
+        ranges.emplace_back( region.base, region.base + region.size);
+    }
+    return ranges;
+}
+
 MemoryRegion*
 Memory::findRegion( uint32_t addr,
                     uint32_t size)
@@ -59,14 +95,14 @@ Memory::loadImpl( uint32_t addr,
     if ( region == nullptr )
     {
         return Error( ErrorCode::InvalidMemoryAccess,
-                      std::format( "Uncommited memory access: [{}; {})",
+                      std::format( "Uncommited memory access: [{:#x}; {:#x})",
                                    addr, addr + sizeof( T)));
     }
 
     if ( !region->permissions.Read() )
     {
         return Error( ErrorCode::InvalidMemoryAccess,
-                      std::format( "Load from memory, without read permissions: [{}; {})",
+                      std::format( "Load from memory, without read permissions: [{:#x}; {:#x})",
                                    addr, addr + sizeof( T)));
     }
 
@@ -74,12 +110,12 @@ Memory::loadImpl( uint32_t addr,
     {
         return Error( ErrorCode::InvalidMemoryAccess,
                       std::format( "Load executable from memory, without execute permission: "
-                                   "[{}; {})",
+                                   "[{:#x}; {:#x})",
                                    addr, addr + sizeof( T)));
     }
 
     T value{};
-    std::memcpy( &value, region->data.get() + addr, sizeof( value));
+    std::memcpy( &value, region->data.get() + addr - region->base, sizeof( value));
     return value;
 }
 
@@ -95,18 +131,18 @@ Memory::storeImpl( uint32_t addr, T value)
     if ( region == nullptr )
     {
         return Error( ErrorCode::InvalidMemoryAccess,
-                      std::format( "Uncommited memory access: [{}; {})",
+                      std::format( "Uncommited memory access: [{:#x}; {:#x})",
                                    addr, addr + sizeof( T)));
     }
 
     if ( !region->permissions.Write() )
     {
         return Error( ErrorCode::InvalidMemoryAccess,
-                      std::format( "Store to memory, without write permissions: [{}; {})",
+                      std::format( "Store to memory, without write permissions: [{:#x}; {:#x})",
                                    addr, addr + sizeof( T)));
     }
 
-    std::memcpy( region->data.get() + addr, &value, sizeof( value));
+    std::memcpy( region->data.get() + addr - region->base, &value, sizeof( value));
     return Expected<void>();
 }
 

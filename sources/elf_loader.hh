@@ -3,6 +3,7 @@
 
 #include <filesystem>
 #include <expected>
+#include <cstdint>
 
 #include "memory.hh"
 #include "errors.hh"

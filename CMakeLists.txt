@@ -137,6 +137,7 @@ target_sources(riscv-interpreter
         "${SOURCE_DIR}/instructions.cc"
         "${SOURCE_DIR}/memory.cc"
         "${SOURCE_DIR}/elf_loader.cc"
+        "${SOURCE_DIR}/abi.cc"
 
     PRIVATE
         FILE_SET HEADERS
@@ -153,6 +154,7 @@ target_sources(riscv-interpreter
             "${SOURCE_DIR}/memory.hh"
             "${SOURCE_DIR}/debug.hh"
             "${SOURCE_DIR}/errors.hh"
+            "${SOURCE_DIR}/abi.hh"
 )
 target_compile_features(riscv-interpreter PRIVATE cxx_std_23)
 target_compile_options(riscv-interpreter PRIVATE -Werror -Wall -Wextra -Wpedantic)

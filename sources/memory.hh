@@ -56,17 +56,17 @@ struct MemoryRegion
 
     bool
     contains( uint32_t addr,
-              uint32_t size) const
+              uint32_t sz) const
     {
-        return (addr >= base) && (addr + size <= base + size);
+        return (addr >= base) && (addr + sz <= base + size);
     }
 
     bool
     overlaps( uint32_t addr,
-              uint32_t size) const
+              uint32_t sz) const
     {
         return ( (addr >= base) && (addr < base + size) )
-               || ( (addr + size >= base) && (addr + size < base + size) );
+               || ( (addr + sz >= base) && (addr + sz < base + size) );
     }
 };
 
@@ -99,6 +99,12 @@ public:
     {
         return storeImpl<T>( addr, value);
     }
+
+    void loadTrusted( uint32_t addr, uint32_t size, void* data);
+    void storeTrusted( uint32_t addr, uint32_t size, const void* data);
+
+public:
+    std::vector<std::pair<uint32_t, uint32_t>> getCommitedRanges() const;
 
 private:
     MemoryRegion* findRegion( uint32_t addr, uint32_t size);

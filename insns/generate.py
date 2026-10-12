@@ -427,7 +427,7 @@ def generate(
             "        default:",
             "        {",
             "            return Error( ErrorCode::UnsupportedInstruction,",
-            "                         std::format( \"Unsupported instruction: {:x}\",",
+            "                         std::format( \"Unsupported instruction: 0x{:x}\",",
             "                                      static_cast<int>( operation)));",
             "        }",
             "    }",

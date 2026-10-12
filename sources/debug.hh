@@ -2,6 +2,9 @@
 #define RISCV_INTERPRETER_DEBUG_HH__
 
 #include <source_location>
+#include <string>
+#include <vector>
+#include <cstddef>
 
 #include "spdlog/spdlog.h"
 
@@ -12,7 +15,15 @@
 #define RVI_ERROR(    ...) SPDLOG_ERROR(    __VA_ARGS__)
 #define RVI_CRITICAL( ...) SPDLOG_CRITICAL( __VA_ARGS__)
 
+//
+// This must be called in main start. The spdlog compile time level is set with CMake,
+// but spdlog runtime level is set to default info.
+//
+#define RVI_INIT_SPDLOG_LEVEL ::spdlog::set_level( spdlog::level::trace)
+
 namespace riscv
+{
+namespace debug
 {
 namespace detail
 {
@@ -40,6 +51,23 @@ onUnreachableReached( std::source_location location)
 }
 
 } // ! namespace detail
+
+inline std::string
+memoryRangesToStr( const std::vector<std::pair<uint32_t, uint32_t>>& ranges)
+{
+    std::string result = "";
+    for ( auto it = ranges.begin(); it != ranges.end(); ++it )
+    {
+        result += std::format( "[{:#x}:{:#x}){}",
+                               it->first,
+                               it->second,
+                               (std::next( it) == ranges.end()) ? ""
+                                                                : ", ");
+    }
+    return result;
+}
+
+} // ! namespace debug
 } // ! namespace riscv
 
 #if RVI_DEBUG_ENABLED
@@ -48,14 +76,15 @@ onUnreachableReached( std::source_location location)
     {                                                                                              \
         if ( !(expression_) )                                                                      \
         {                                                                                          \
-            ::riscv::detail::onAssertionFailed( #expression_, std::source_location::current());    \
+            ::riscv::debug::detail::onAssertionFailed( #expression_,                               \
+                                                       std::source_location::current());           \
         }                                                                                          \
     } while ( 0 )
 
     #define RVI_UNREACHABLE()                                                                      \
     do                                                                                             \
     {                                                                                              \
-        ::riscv::detail::onUnreachableReached( std::source_location::current());                   \
+        ::riscv::debug::detail::onUnreachableReached( std::source_location::current());            \
     } while ( 0 )
 
 #else // RVI_DEBUG_ENABLED

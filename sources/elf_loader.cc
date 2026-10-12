@@ -1,3 +1,5 @@
+#include <optional>
+
 #include "elfio/elfio.hpp"
 
 #include "elf_loader.hh"
@@ -45,6 +47,7 @@ parseElfHeader( const ELFIO::elfio& elf)
 
 struct Allocation
 {
+    bool need_allocation;
     uint32_t m_offset;
     uint32_t m_size;
     uint32_t f_size;
@@ -56,8 +59,9 @@ parseProgramHeader( const ELFIO::segment& segment)
 {
     if ( segment.get_type() != ELFIO::PT_LOAD )
     {
-        return Error( ErrorCode::ElfSegmentTypeUnexpected,
-                      "Expected only PT_LOAD segments");
+        RVI_WARN( "Skipping not PT_LOAD type segment: actual type is {}",
+                  static_cast<int>( segment.get_type()));
+        return Allocation( false, 0, 0, 0, 0);
     }
 
     uint32_t m_offset = segment.get_virtual_address();
@@ -66,7 +70,7 @@ parseProgramHeader( const ELFIO::segment& segment)
 
     uint32_t flags = segment.get_flags();
 
-    return Allocation( m_offset, m_size, f_size, mem::MemoryPermissions( flags));
+    return Allocation( true, m_offset, m_size, f_size, mem::MemoryPermissions( flags));
 }
 
 } // ! anonymous namespace
@@ -75,6 +79,8 @@ Expected<uint32_t>
 loadElfFile( mem::Memory& memory,
              const std::string& elf_filename)
 {
+    RVI_TRACE( "Loading ELF file: {}", elf_filename);
+
     ELFIO::elfio elf;
     if ( !elf.load( elf_filename) )
     {
@@ -95,6 +101,7 @@ loadElfFile( mem::Memory& memory,
             return entry_r.error();
         }
         entry = entry_r.value();
+        RVI_DEBUG( "Got entry point for ELF: {:#x}", entry);
     }
 
     //
@@ -111,19 +118,25 @@ loadElfFile( mem::Memory& memory,
         }
         const Allocation& alloc = segment_r.value();
 
-        const void* data_ptr = nullptr;
-        if ( alloc.f_size != 0 )
+        if ( alloc.need_allocation )
         {
-            data_ptr = segment.get_data();
-        }
-        auto alloc_r = memory.allocate( alloc.m_offset,
-                                        alloc.m_size,
-                                        alloc.permissions,
-                                        data_ptr,
-                                        alloc.f_size);
-        if ( !alloc_r.ok() )
-        {
-            return alloc_r.error();
+            const void* data_ptr = nullptr;
+            if ( alloc.f_size != 0 )
+            {
+                data_ptr = segment.get_data();
+            }
+            RVI_DEBUG( "Allocating memory: [{:#x}:{:#x})",
+                       alloc.m_offset,
+                       alloc.m_offset + alloc.m_size);
+            auto alloc_r = memory.allocate( alloc.m_offset,
+                                            alloc.m_size,
+                                            alloc.permissions,
+                                            data_ptr,
+                                            alloc.f_size);
+            if ( !alloc_r.ok() )
+            {
+                return alloc_r.error();
+            }
         }
     }
 

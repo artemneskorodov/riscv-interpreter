@@ -24,6 +24,7 @@ main( int argc,
             RVI_CRITICAL( "Error while loading ELF file: {}", r.error().message);
             return static_cast<int>( r.error().error);
         }
+        cpu_model.setPC(r.value());
     }
 
     //

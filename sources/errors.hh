@@ -22,6 +22,8 @@ enum class ErrorCode
     ElfVersionUnexpected,
     ElfSegmentTypeUnexpected,
     ElfOpenFailed,
+    UnknownInstruction,
+    UnsupportedInstruction,
 };
 
 struct Error
@@ -47,7 +49,7 @@ public:
     T&
     value() &
     {
-        T* value = std::get_if<T>( data_);
+        T* value = std::get_if<T>( &data_);
         RVI_ASSERT( value != nullptr);
         return *value;
     }
@@ -55,7 +57,7 @@ public:
     const T&
     value() const &
     {
-        const T* value = std::get_if<T>( data_);
+        const T* value = std::get_if<T>( &data_);
         RVI_ASSERT( value != nullptr);
         return *value;
     }
@@ -63,7 +65,7 @@ public:
     Error&
     error() &
     {
-        Error* error = std::get_if<Error>( data_);
+        Error* error = std::get_if<Error>( &data_);
         RVI_ASSERT( error != nullptr);
         return *error;
     }
@@ -71,7 +73,7 @@ public:
     const Error&
     error() const &
     {
-        const Error* error = std::get_if<Error>( data_);
+        const Error* error = std::get_if<Error>( &data_);
         RVI_ASSERT( error != nullptr);
         return *error;
     }

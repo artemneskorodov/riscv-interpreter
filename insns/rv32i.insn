@@ -1,56 +1,202 @@
 add:
     x[rd] = x[rs1] + x[rs2]
+    pc = pc + 4
 
 addi:
     x[rd] = x[rs1] + sx(immI)
+    pc = pc + 4
 
 and:
     x[rd] = x[rs1] & x[rs2]
+    pc = pc + 4
 
 andi:
     x[rd] = x[rs1] & sx(immI)
+    pc = pc + 4
 
 auipc:
     x[rd] = pc + sx(immU)
+    pc = pc + 4
 
 beq:
+    if x[rs1] == x[rs2]:
+        pc = pc + sx(immB)
+    else:
+        pc = pc + 4
+
 bge:
+    if signed(x[rs1]) >= signed(x[rs2]):
+        pc = pc + sx(immB)
+    else:
+        pc = pc + 4
+
 bgeu:
+    if x[rs1] >= x[rs2]:
+        pc = pc + sx(immB)
+    else:
+        pc = pc + 4
+
 blt:
+    if signed(x[rs1]) < signed(x[rs2]):
+        pc = pc + sx(immB)
+    else:
+        pc = pc + 4
+
 bltu:
+    if x[rs1] < x[rs2]:
+        pc = pc + sx(immB)
+    else:
+        pc = pc + 4
+
 bne:
+    if x[rs1] != x[rs2]:
+        pc = pc + sx(immB)
+    else:
+        pc = pc + 4
+
 ebreak:
+    # TODO
+    # RaiseException(Breakpoint)
+
 ecall:
+    # TODO
+    # RaiseException(EnvironmentCall)
+
 fence:
+    # TODO
+    # Fence(pred, succ)
+
 jal:
+    x[rd] = pc + 4
+    pc = pc + sx(immJ)
+
 jalr:
+    t = pc + 4
+    pc = (x[rs1] + sx(immI)) & (~1)
+    x[rd] = t
+
 lb:
+    x[rd] = sx(mem8[x[rs1] + sx(immI)], 8)
+    pc = pc + 4
+
 lbu:
     x[rd] = mem8[x[rs1] + sx(immI)]
+    pc = pc + 4
 
 lh:
+    addr = x[rs1] + sx(immI)
+    loaded = mem16[addr]
+    x[rd] = sx(loaded, 16)
+    pc = pc + 4
+
 lhu:
+    addr = x[rs1] + sx(immI)
+    loaded = mem16[addr]
+    x[rd] = loaded
+    pc = pc + 4
+
 lui:
+    x[rd] = sx(immU)
+    pc = pc + 4
+
 lw:
+    addr = x[rs1] + sx(immI)
+    loaded = mem32[addr]
+    x[rd] = sx(loaded, 32)
+    pc = pc + 4
+
 or:
+    x[rd] = x[rs1] | x[rs2]
+    pc = pc + 4
+
 ori:
+    x[rd] = x[rs1] | sx(immI)
+    pc = pc + 4
+
 pause:
+    pc = pc + 4
+
 sb:
+    addr = x[rs1] + sx(immS)
+    mem8[addr] = x[rs2]
+    pc = pc + 4
+
 sh:
+    addr = x[rs1] + sx(immS)
+    mem16[addr] = x[rs2]
+    pc = pc + 4
+
 sll:
+    shift = x[rs2] & 0x1f # lower 5 bits
+    x[rd] = x[rs1] << shift
+    pc = pc + 4
+
 slli:
-slli_rv32:
+    shamt = rs2
+    x[rd] = x[rs1] << shamt
+    pc = pc + 4
+
 slt:
+    if signed(x[rs1]) < signed(x[rs2]):
+        x[rd] = 1
+    else:
+        x[rd] = 0
+    pc = pc + 4
+
 slti:
+    if signed(x[rs1]) < signed(sx(immI)):
+        x[rd] = 1
+    else:
+        x[rd] = 0
+    pc = pc + 4
+
 sltiu:
+    if x[rs1] < sx(immI):
+        x[rd] = 1
+    else:
+        x[rd] = 0
+    pc = pc + 4
+
 sltu:
+    if x[rs1] < x[rs2]:
+        x[rd] = 1
+    else:
+        x[rd] = 0
+    pc = pc + 4
+
 sra:
+    shift = x[rs2] & 0x1f # 5 lower bits
+    x[rd] = signed(x[rs1]) >> shift
+    pc = pc + 4
+
 srai:
-srai_rv32:
+    shift = rs2 & 0x1f # rs2 is 5 bits, but place it here for accuracy
+    x[rd] = signed(x[rs1]) >> signed(shift)
+    pc = pc + 4
+
 srl:
+    shift = x[rs2] & 0x1f # 5 lower bits
+    x[rd] = x[rs1] >> shift
+    pc = pc + 4
+
 srli:
-srli_rv32:
+    shift = rs2 & 0x1f # rs2 is 5 bits, but place it here for accuracy
+    x[rd] = x[rs1] >> shift
+    pc = pc + 4
+
 sub:
+    x[rd] = x[rs1] - x[rs2]
+    pc = pc + 4
+
 sw:
+    addr = x[rs1] + sx(immS)
+    mem32[addr] = x[rs2]
+    pc = pc + 4
+
 xor:
+    x[rd] = x[rs1] ^ x[rs2]
+    pc = pc + 4
+
 xori:
+    x[rd] = x[rs1] ^ sx(immI)
+    pc = pc + 4

@@ -10,29 +10,30 @@ namespace riscv
 namespace insn
 {
 
-void
+Expected<void>
 runSingleInstruction( CPUModel& cpu_model)
 {
-    isa::InstructionBits bits = 0;
     auto load_bits = cpu_model.memory().loadExecutable( cpu_model.getPC());
     if ( !load_bits.ok() )
     {
-        std::cout << "Error while load instruction: " << load_bits.error().message << std::endl;
-        return ;
+        return load_bits.error();
     }
+
+    isa::InstructionBits bits = load_bits.value();
 
     auto encoding = isa::matchInstruction( bits);
-    if ( !encoding )
+    if ( !encoding.has_value() )
     {
-        std::cout << "Unknown instruction: " << std::hex << bits << std::endl;
-        return ;
+        return Error( ErrorCode::UnknownInstruction,
+                      std::format( "Unknown instruction: {}", bits));
     }
 
-    if ( !runGeneratedInstruction( cpu_model, encoding->instruction, bits) )
+    auto r = runGeneratedInstruction( cpu_model, encoding->instruction, bits);
+    if ( !r.ok() )
     {
-        std::cout << "Instruction behaviour is not implemented: "
-                  << static_cast<int>( encoding->instruction) << std::endl;
+        return r.error();
     }
+    return Expected<void>();
 }
 
 } // ! namespace insn

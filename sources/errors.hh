@@ -24,6 +24,7 @@ enum class ErrorCode
     ElfOpenFailed,
     UnknownInstruction,
     UnsupportedInstruction,
+    NoElfFileSpecified,
 };
 
 struct Error

@@ -22,6 +22,7 @@ public:
         RVI_ASSERT( n < kProgrammerRegistersNumber);
         return x_[n];
     }
+
     void
     setX( unsigned n,
           uint32_t value)

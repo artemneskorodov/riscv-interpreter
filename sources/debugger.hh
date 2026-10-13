@@ -1,10 +1,6 @@
 #ifndef RISCV_INTERPRETER_DEBUGGER_HH__
 #define RISCV_INTERPRETER_DEBUGGER_HH__
 
-#include <cstdint>
-#include <variant>
-#include <set>
-
 #include "cpu_model.hh"
 
 namespace riscv
@@ -13,10 +9,14 @@ namespace riscv
 class Debugger
 {
 public:
-    std::optional<uint32_t> prompt( CPUModel& cpu_model);
+    enum class Action
+    {
+        Step,
+        Continue,
+        Quit,
+    };
 
-private:
-    std::set<uint32_t> breakpoints_;
+    Action prompt( CPUModel& cpu_model);
 
 };
 

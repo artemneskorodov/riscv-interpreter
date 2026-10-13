@@ -9,7 +9,7 @@
 #include "elf_loader.hh"
 #include "errors.hh"
 #include "abi.hh"
-#include "disasm.hh"
+#include "debugger.hh"
 
 int
 main( int argc,
@@ -70,8 +70,29 @@ main( int argc,
     //
     // Running instructions
     //
+
+#if RVI_DEBUGGER_MODE_ENABLED
+    riscv::Debugger debugger{};
+    bool call_debugger = true;
+#endif // ! RVI_DEBUGGER_MODE_ENABLED
+
     for ( ; ; )
     {
+
+#if RVI_DEBUGGER_MODE_ENABLED
+        if ( call_debugger )
+        {
+            riscv::Debugger::Action action = debugger.prompt( cpu_model);
+
+            switch ( action )
+            {
+                case riscv::Debugger::Action::Step:     break;
+                case riscv::Debugger::Action::Continue: call_debugger = false; break;
+                case riscv::Debugger::Action::Quit:     return 0;
+            }
+        }
+#endif // ! RVI_DEBUGGER_MODE_ENABLED
+
         auto r = riscv::insn::runSingleInstruction( cpu_model);
         if ( !r.ok() )
         {

@@ -9,6 +9,7 @@
 #include "elf_loader.hh"
 #include "errors.hh"
 #include "abi.hh"
+#include "debugger.hh"
 
 int
 main( int argc,
@@ -69,21 +70,40 @@ main( int argc,
     //
     // Running instructions
     //
+
+#if RVI_DEBUGGER_MODE_ENABLED
+    riscv::Debugger debugger{};
+    bool call_debugger = true;
+#endif // ! RVI_DEBUGGER_MODE_ENABLED
+
+    for ( ; ; )
     {
-        for ( ; ; )
+
+#if RVI_DEBUGGER_MODE_ENABLED
+        if ( call_debugger )
         {
-            auto r = riscv::insn::runSingleInstruction( cpu_model);
-            if ( !r.ok() )
+            riscv::Debugger::Action action = debugger.prompt( cpu_model);
+
+            switch ( action )
             {
-                RVI_CRITICAL( "Error while running instruction: {}", r.error().message);
-                return static_cast<int>( r.error().error);
+                case riscv::Debugger::Action::Step:     break;
+                case riscv::Debugger::Action::Continue: call_debugger = false; break;
+                case riscv::Debugger::Action::Quit:     return 0;
             }
-            if ( std::holds_alternative<riscv::insn::Exit>( r.value()) )
-            {
-                int status = std::get<riscv::insn::Exit>( r.value()).status;
-                RVI_DEBUG( "Exiting from main with status = {}", status);
-                return status;
-            }
+        }
+#endif // ! RVI_DEBUGGER_MODE_ENABLED
+
+        auto r = riscv::insn::runSingleInstruction( cpu_model);
+        if ( !r.ok() )
+        {
+            RVI_CRITICAL( "Error while running instruction: {}", r.error().message);
+            return static_cast<int>( r.error().error);
+        }
+        if ( std::holds_alternative<riscv::insn::Exit>( r.value()) )
+        {
+            int status = std::get<riscv::insn::Exit>( r.value()).status;
+            RVI_DEBUG( "Exiting from main with status = {}", status);
+            return status;
         }
     }
 }

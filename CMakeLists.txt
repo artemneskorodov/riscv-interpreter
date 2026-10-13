@@ -117,12 +117,38 @@ endif()
 
 message(STATUS "Building with diagnostics level: " "${RISCV_DIAGNOSTICS_LEVEL}")
 
+set(RISCV_DEBUGGER_MODE "OFF" CACHE STRING "Enable debugging mode in compile time")
+set_property(
+    CACHE RISCV_DEBUGGER_MODE
+    PROPERTY STRINGS
+        ON
+)
+string(TOUPPER "${RISCV_DEBUGGER_MODE}" RISCV_DEBUGGER_MODE)
+if(RISCV_DEBUGGER_MODE STREQUAL "ON")
+    set(RVI_DEBUGGER_MODE_ENABLED 1)
+    message(STATUS "Building with debugger mode enabled")
+elseif(RISCV_DEBUGGER_MODE STREQUAL "OFF")
+    set(RVI_DEBUGGER_MODE_ENABLED 0)
+    message(STATUS "Building with debugger mode disabled")
+else()
+    message(FATAL_ERROR "Unknown RISCV_DEBUGGER_MODE: " "${RISCV_DEBUGGER_MODE}")
+endif()
+
 #
 # Including ELFIO
 #
 add_subdirectory(
     "${PROJECT_SOURCE_DIR}/3rd/ELFIO"
     "${PROJECT_BINARY_DIR}/3rd/ELFIO"
+    EXCLUDE_FROM_ALL
+)
+
+#
+# Including larkmjc/riscv-disassembler
+#
+add_subdirectory(
+    "${PROJECT_SOURCE_DIR}/3rd/riscv-disassembler"
+    "${PROJECT_SOURCE_DIR}/3rd/riscv-disassembler"
     EXCLUDE_FROM_ALL
 )
 
@@ -138,6 +164,8 @@ target_sources(riscv-interpreter
         "${SOURCE_DIR}/memory.cc"
         "${SOURCE_DIR}/elf_loader.cc"
         "${SOURCE_DIR}/abi.cc"
+        "${SOURCE_DIR}/disasm.cc"
+        "${SOURCE_DIR}/debugger.cc"
 
     PRIVATE
         FILE_SET HEADERS
@@ -155,10 +183,25 @@ target_sources(riscv-interpreter
             "${SOURCE_DIR}/debug.hh"
             "${SOURCE_DIR}/errors.hh"
             "${SOURCE_DIR}/abi.hh"
+            "${SOURCE_DIR}/disasm.hh"
+            "${SOURCE_DIR}/debugger.hh"
 )
 target_compile_features(riscv-interpreter PRIVATE cxx_std_23)
-target_compile_options(riscv-interpreter PRIVATE -Werror -Wall -Wextra -Wpedantic)
-target_link_libraries(riscv-interpreter PRIVATE spdlog::spdlog elfio::elfio)
+if(RVI_DEBUG_ENABLED)
+    target_compile_options(riscv-interpreter PRIVATE -Werror -Wall -Wextra -Wpedantic)
+endif()
+target_link_libraries(
+    riscv-interpreter
+    PRIVATE
+    spdlog::spdlog
+    elfio::elfio
+    rvasm)
+target_include_directories(
+    riscv-interpreter
+    PRIVATE
+    "${PROJECT_SOURCE_DIR}/3rd/riscv-disassembler/src"
+)
 target_compile_definitions(riscv-interpreter PRIVATE
     SPDLOG_ACTIVE_LEVEL=${RVI_SPDLOG_LEVEL}
-    RVI_DEBUG_ENABLED=${RVI_DEBUG_ENABLED})
+    RVI_DEBUG_ENABLED=${RVI_DEBUG_ENABLED}
+    RVI_DEBUGGER_MODE_ENABLED=${RVI_DEBUGGER_MODE_ENABLED})

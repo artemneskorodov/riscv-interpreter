@@ -48,6 +48,66 @@ Memory::loadTrusted( uint32_t addr,
     std::memcpy( data, region->data.get() + addr - region->base, size);
 }
 
+Expected<void>
+Memory::copyFromGuest( uint32_t addr,
+                       void* dst,
+                       uint32_t size)
+{
+    auto r = validateMemoryRange( addr, size, MemoryPermissions::READ);
+    if ( !r.ok() )
+    {
+        return r.error();
+    }
+
+    uint32_t copied = 0;
+
+    while ( copied < size )
+    {
+        MemoryRegion* region = findRegionContaining( addr + copied);
+        RVI_ASSERT( region != nullptr);
+
+        uint32_t region_offset = addr + copied - region->base;
+        uint32_t piece_size = std::min<uint32_t>( region->size - region_offset,
+                                                  size - copied);
+        std::memcpy( static_cast<std::byte*>( dst) + copied,
+                     region->data.get() + region_offset,
+                     piece_size);
+        copied += piece_size;
+    }
+
+    return Expected<void>();
+}
+
+Expected<void>
+Memory::copyToGuest( uint32_t addr,
+                     const void* src,
+                     uint32_t size)
+{
+    auto r = validateMemoryRange( addr, size, MemoryPermissions::WRITE);
+    if ( !r.ok() )
+    {
+        return r.error();
+    }
+
+    uint32_t copied = 0;
+
+    while ( copied < size )
+    {
+        MemoryRegion* region = findRegionContaining( addr + copied);
+        RVI_ASSERT( region != nullptr);
+
+        uint32_t region_offset = addr + copied - region->base;
+        uint32_t piece_size = std::min<uint32_t>( region->size - region_offset,
+                                                  size - copied);
+        std::memcpy( region->data.get() + region_offset,
+                     static_cast<const std::byte*>( dst) + copied,
+                     piece_size);
+        copied += piece_size;
+    }
+
+    return Expected<void>();
+}
+
 void
 Memory::storeTrusted( uint32_t addr,
                       uint32_t size,
@@ -79,6 +139,19 @@ Memory::findRegion( uint32_t addr,
     for ( MemoryRegion& region : memory_regions_ )
     {
         if ( region.contains( addr, size) )
+        {
+            return &region;
+        }
+    }
+    return nullptr;
+}
+
+MemoryRegion*
+Memory::findRegionContaining( uint32_t addr)
+{
+    for ( MemoryRegion& region : memory_regions_ )
+    {
+        if ( (addr >= region.base) && (addr < region.base + region.size) )
         {
             return &region;
         }
@@ -149,6 +222,60 @@ Memory::storeImpl( uint32_t addr, T value)
 template Expected<void> Memory::storeImpl<uint8_t>( uint32_t , uint8_t );
 template Expected<void> Memory::storeImpl<uint16_t>( uint32_t , uint16_t );
 template Expected<void> Memory::storeImpl<uint32_t>( uint32_t , uint32_t );
+
+Expected<void>
+Memory::validateMemoryRange( uint32_t addr,
+                             uint32_t size,
+                             MemoryPermissions permissions)
+{
+    uint32_t begin = addr;
+    if ( static_cast<uint64_t>( size) + static_cast<uint64_t>( begin) > UINT32_MAX )
+    {
+        return Error( ErrorCode::InvalidMemoryAccess,
+                      std::format( "Memory exceeds RV32 address space: addr={:#x}, size={:#x}",
+                                   addr, size));
+    }
+    uint32_t end = addr + size;
+    if ( begin == end )
+    {
+        return Expected<void>();
+    }
+
+    while ( begin < end )
+    {
+        const MemoryRegion* region = findRegionContaining( begin);
+        if ( region == nullptr )
+        {
+            return Error( ErrorCode::InvalidMemoryAccess,
+                          std::format( "Access to uncommitted memory: [{:#x}, {:#x})",
+                                       addr, addr + size));
+        }
+
+        begin = std::min( end, region->base + region->size);
+
+        if ( permissions.Read() && !region->permissions.Read() )
+        {
+            return Error( ErrorCode::InvalidMemoryAccess,
+                          std::format( "Read from memory without permissions: [{:#x}, {:#x})",
+                                       addr, addr + size));
+        }
+        if ( permissions.Write() && !region->permissions.Write() )
+        {
+            return Error( ErrorCode::InvalidMemoryAccess,
+                          std::format( "Write to memory without permissions: [{:#x}, {:#x})",
+                                       addr, addr + size));
+        }
+        if ( permissions.Execute() && !region->permissions.Execute() )
+        {
+            return Error( ErrorCode::InvalidMemoryAccess,
+                          std::format( "Access to executable memory without permissions: "
+                                       "[{:#x}, {:#x})",
+                                       addr, addr + size));
+        }
+    }
+
+    return Expected<void>();
+}
 
 } // ! namespace mem
 } // ! namespace riscv

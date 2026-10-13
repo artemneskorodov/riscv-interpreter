@@ -36,6 +36,102 @@ toHostFd( int guest_fd)
 }
 
 Expected<RunAction>
+handleSyscallWrite( CPUModel& cpu_model)
+{
+    uint32_t fd = cpu_model.getX( abi::AbiRegisterName::a0);
+    uint32_t buf = cpu_model.getX( abi::AbiRegisterName::a1);
+    uint32_t count = cpu_model.getX( abi::AbiRegisterName::a2);
+    RVI_DEBUG( "Syscall: write( fd={}, buf={}, count={})", fd, buf, count);
+
+    //
+    // Translating guest fd to host fd
+    // TODO: incorrect fd must be interpreted as programmer error, so the return value of syscall
+    //       must be set to a0
+    //
+    int host_fd;
+    {
+        auto r = toHostFd( static_cast<int>( fd));
+        RVI_ASSERT( r.ok());
+        host_fd = r.value();
+    }
+
+    //
+    // Loading memory from guest
+    //
+    std::vector<std::byte> host_buffer;
+    {
+        host_buffer.resize( count);
+        auto r = cpu_model.memory().copyFromGuest( buf, host_buffer.data(), count);
+        if ( !r.ok() )
+        {
+            return r.error();
+        }
+    }
+
+    //
+    // Running host write
+    //
+    {
+        ssize_t write_r = ::write( host_fd, host_buffer.data(), count);
+        cpu_model.setX( abi::AbiRegisterName::a0, static_cast<uint32_t>( write_r));
+    }
+
+    return RunAction( Continue());
+}
+
+Expected<RunAction>
+handleSyscallRead( CPUModel& cpu_model)
+{
+    uint32_t fd = cpu_model.getX( abi::AbiRegisterName::a0);
+    uint32_t buf = cpu_model.getX( abi::AbiRegisterName::a1);
+    uint32_t count = cpu_model.getX( abi::AbiRegisterName::a2);
+    RVI_DEBUG( "Syscall: read( fd={}, buf={}, count={})", fd, buf, count);
+
+    //
+    // Translating guest fd to host fd
+    // TODO: incorrect fd must be interpreted as programmer error, so the return value of syscall
+    //       must be set to a0
+    //
+    int host_fd;
+    {
+        auto r = toHostFd( static_cast<int>( fd));
+        RVI_ASSERT( r.ok());
+        host_fd = r.value();
+    }
+
+    //
+    // Creating host buffer
+    //
+    std::vector<std::byte> host_buffer( count);
+
+    //
+    // Running host read
+    //
+    int32_t result;
+    {
+        ssize_t read_r = ::read( host_fd, host_buffer.data(), count);
+        result = static_cast<int32_t>( read_r);
+        cpu_model.setX( abi::AbiRegisterName::a0, result);
+    }
+
+    //
+    // Loading to guest memory
+    //
+    {
+        if ( result > 0 )
+        {
+            auto r = cpu_model.memory().copyToGuest( buf, host_buffer.data(), result);
+            if ( !r.ok() )
+            {
+                return r.error();
+            }
+        }
+    }
+
+    return RunAction( Continue());
+}
+
+Expected<RunAction>
 handleEnvironmentCall( CPUModel& cpu_model)
 {
     uint32_t a7 = cpu_model.getX( abi::AbiRegisterName::a7); // Syscall number
@@ -44,56 +140,11 @@ handleEnvironmentCall( CPUModel& cpu_model)
     {
         case SupportedSyscalls::write:
         {
-            uint32_t fd = cpu_model.getX( abi::AbiRegisterName::a0);
-            uint32_t buf = cpu_model.getX( abi::AbiRegisterName::a1);
-            uint32_t count = cpu_model.getX( abi::AbiRegisterName::a2);
-            RVI_DEBUG( "Syscall: write( fd={}, buf={}, count={})", fd, buf, count);
-
-            int host_fd;
-            {
-                auto host_fd_r = toHostFd( static_cast<int>( fd));
-                if ( !host_fd_r.ok() )
-                {
-                    return host_fd_r.error();
-                }
-                host_fd = host_fd_r.value();
-            }
-
-            std::vector<std::byte> write_buffer;
-            write_buffer.reserve( count);
-            // TODO make this cleaner to allow memory access checks
-            cpu_model.memory().loadTrusted( buf, count, write_buffer.data());
-            ssize_t write_r = ::write( host_fd, write_buffer.data(), count);
-            cpu_model.setX( abi::AbiRegisterName::a0, static_cast<uint32_t>( write_r));
-            return RunAction( Continue());
+            return handleSyscallWrite( cpu_model);
         }
         case SupportedSyscalls::read:
         {
-            uint32_t fd = cpu_model.getX( abi::AbiRegisterName::a0);
-            uint32_t buf = cpu_model.getX( abi::AbiRegisterName::a1);
-            uint32_t count = cpu_model.getX( abi::AbiRegisterName::a2);
-            RVI_DEBUG( "Syscall: read( fd={}, buf={}, count={})", fd, buf, count);
-
-            int host_fd;
-            {
-                auto host_fd_r = toHostFd( static_cast<int>( fd));
-                if ( !host_fd_r.ok() )
-                {
-                    return host_fd_r.error();
-                }
-                host_fd = host_fd_r.value();
-            }
-
-            std::vector<std::byte> read_buffer;
-            read_buffer.reserve( count);
-            ssize_t read_r = ::read( host_fd, read_buffer.data(), count);
-
-            if ( read_r >= 0 )
-            {
-                cpu_model.memory().storeTrusted( buf, read_r, read_buffer.data());
-            }
-            cpu_model.setX( abi::AbiRegisterName::a0, static_cast<uint32_t>( read_r));
-            return RunAction( Continue());
+            return handleSyscallRead( cpu_model);
         }
         case SupportedSyscalls::exit:
         {

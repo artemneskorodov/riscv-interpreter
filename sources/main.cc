@@ -9,6 +9,7 @@
 #include "elf_loader.hh"
 #include "errors.hh"
 #include "abi.hh"
+#include "disasm.hh"
 
 int
 main( int argc,
@@ -69,21 +70,19 @@ main( int argc,
     //
     // Running instructions
     //
+    for ( ; ; )
     {
-        for ( ; ; )
+        auto r = riscv::insn::runSingleInstruction( cpu_model);
+        if ( !r.ok() )
         {
-            auto r = riscv::insn::runSingleInstruction( cpu_model);
-            if ( !r.ok() )
-            {
-                RVI_CRITICAL( "Error while running instruction: {}", r.error().message);
-                return static_cast<int>( r.error().error);
-            }
-            if ( std::holds_alternative<riscv::insn::Exit>( r.value()) )
-            {
-                int status = std::get<riscv::insn::Exit>( r.value()).status;
-                RVI_DEBUG( "Exiting from main with status = {}", status);
-                return status;
-            }
+            RVI_CRITICAL( "Error while running instruction: {}", r.error().message);
+            return static_cast<int>( r.error().error);
+        }
+        if ( std::holds_alternative<riscv::insn::Exit>( r.value()) )
+        {
+            int status = std::get<riscv::insn::Exit>( r.value()).status;
+            RVI_DEBUG( "Exiting from main with status = {}", status);
+            return status;
         }
     }
 }

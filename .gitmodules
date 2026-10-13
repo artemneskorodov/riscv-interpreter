@@ -10,3 +10,6 @@
 [submodule "3rd/riscv-interpreter-tests"]
 	path = 3rd/riscv-interpreter-tests
 	url = https://gitlab.com/iDang3r/riscv-interpreter-task.git
+[submodule "3rd/riscv-disassembler"]
+	path = 3rd/riscv-disassembler
+	url = https://github.com/larkmjc/riscv-disassembler.git

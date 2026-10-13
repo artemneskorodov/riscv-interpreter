@@ -127,6 +127,15 @@ add_subdirectory(
 )
 
 #
+# Including larkmjc/riscv-disassembler
+#
+add_subdirectory(
+    "${PROJECT_SOURCE_DIR}/3rd/riscv-disassembler"
+    "${PROJECT_SOURCE_DIR}/3rd/riscv-disassembler"
+    EXCLUDE_FROM_ALL
+)
+
+#
 # Building riscv-interpreter target
 #
 set(SOURCE_DIR "${PROJECT_SOURCE_DIR}/sources")
@@ -138,6 +147,7 @@ target_sources(riscv-interpreter
         "${SOURCE_DIR}/memory.cc"
         "${SOURCE_DIR}/elf_loader.cc"
         "${SOURCE_DIR}/abi.cc"
+        "${SOURCE_DIR}/disasm.cc"
 
     PRIVATE
         FILE_SET HEADERS
@@ -155,10 +165,21 @@ target_sources(riscv-interpreter
             "${SOURCE_DIR}/debug.hh"
             "${SOURCE_DIR}/errors.hh"
             "${SOURCE_DIR}/abi.hh"
+            "${SOURCE_DIR}/disasm.hh"
 )
 target_compile_features(riscv-interpreter PRIVATE cxx_std_23)
 target_compile_options(riscv-interpreter PRIVATE -Werror -Wall -Wextra -Wpedantic)
-target_link_libraries(riscv-interpreter PRIVATE spdlog::spdlog elfio::elfio)
+target_link_libraries(
+    riscv-interpreter
+    PRIVATE
+    spdlog::spdlog
+    elfio::elfio
+    rvasm)
+target_include_directories(
+    riscv-interpreter
+    PRIVATE
+    "${PROJECT_SOURCE_DIR}/3rd/riscv-disassembler/src"
+)
 target_compile_definitions(riscv-interpreter PRIVATE
     SPDLOG_ACTIVE_LEVEL=${RVI_SPDLOG_LEVEL}
     RVI_DEBUG_ENABLED=${RVI_DEBUG_ENABLED})

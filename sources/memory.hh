@@ -7,6 +7,7 @@
 #include <memory>
 #include <vector>
 #include <concepts>
+#include <span>
 
 #include "errors.hh"
 
@@ -65,8 +66,12 @@ struct MemoryRegion
     overlaps( uint32_t addr,
               uint32_t sz) const
     {
-        return ( (addr >= base) && (addr < base + size) )
-               || ( (addr + sz >= base) && (addr + sz < base + size) );
+        uint32_t this_begin = base;
+        uint32_t this_end = this_begin + size;
+        uint32_t other_begin = addr;
+        uint32_t other_end = other_begin + sz;
+
+        return (this_begin < other_end) && (other_begin < this_end);
     }
 };
 
@@ -100,6 +105,9 @@ public:
         return storeImpl<T>( addr, value);
     }
 
+    Expected<void> copyFromGuest( uint32_t addr, void* dst, uint32_t size);
+    Expected<void> copyToGuest( uint32_t addr, const void* src, uint32_t size);
+
     void loadTrusted( uint32_t addr, uint32_t size, void* data);
     void storeTrusted( uint32_t addr, uint32_t size, const void* data);
 
@@ -108,8 +116,12 @@ public:
 
 private:
     MemoryRegion* findRegion( uint32_t addr, uint32_t size);
+    MemoryRegion* findRegionContaining( uint32_t addr);
     template<MemoryAccessType T> Expected<T> loadImpl( uint32_t addr, bool executable = false);
     template<MemoryAccessType T> Expected<void> storeImpl( uint32_t addr, T value);
+    Expected<void> validateMemoryRange( uint32_t addr,
+                                        uint32_t size,
+                                        MemoryPermissions permissions);
 
 private:
     std::vector<MemoryRegion> memory_regions_;

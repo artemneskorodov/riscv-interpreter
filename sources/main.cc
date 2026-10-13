@@ -78,6 +78,12 @@ main( int argc,
                 RVI_CRITICAL( "Error while running instruction: {}", r.error().message);
                 return static_cast<int>( r.error().error);
             }
+            if ( std::holds_alternative<riscv::insn::Exit>( r.value()) )
+            {
+                int status = std::get<riscv::insn::Exit>( r.value()).status;
+                RVI_DEBUG( "Exiting from main with status = {}", status);
+                return status;
+            }
         }
     }
 }

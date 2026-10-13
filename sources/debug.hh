@@ -87,9 +87,17 @@ memoryRangesToStr( const std::vector<std::pair<uint32_t, uint32_t>>& ranges)
         ::riscv::debug::detail::onUnreachableReached( std::source_location::current());            \
     } while ( 0 )
 
+    #define RVI_FAILURE( ...)                                                                      \
+    do                                                                                             \
+    {                                                                                              \
+        RVI_CRITICAL( __VA_ARGS__);                                                                \
+        ::std::abort();                                                                            \
+    } while ( 0 )
+
 #else // RVI_DEBUG_ENABLED
     #define RVI_ASSERT( condition) ((void)0)
-    #define RVI_UNREACHABLE() ((void)0)
+    #define RVI_UNREACHABLE()      ((void)0)
+    #define RVI_FAILURE( ...)      ((void)0)
 #endif // RVI_DEBUG_ENABLED
 
 #endif // ! RISCV_INTERPRETER_DEBUG_HH__

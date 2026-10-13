@@ -100,7 +100,7 @@ Memory::copyToGuest( uint32_t addr,
         uint32_t piece_size = std::min<uint32_t>( region->size - region_offset,
                                                   size - copied);
         std::memcpy( region->data.get() + region_offset,
-                     static_cast<const std::byte*>( dst) + copied,
+                     static_cast<const std::byte*>( src) + copied,
                      piece_size);
         copied += piece_size;
     }

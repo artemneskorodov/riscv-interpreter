@@ -315,6 +315,14 @@ class CppEmitter:
                 lines.extend(self._add_tabs(self._emit_statements(stmt.orelse)))
                 lines.append("}")
             return lines
+        elif isinstance(stmt, ast.Raise):
+            if not all([
+                    isinstance(stmt.exc, ast.Name),
+                    (stmt.exc.id == "Breakpoint" or stmt.exc.id == "EnvironmentCall")
+                ]):
+                raise self._fail(stmt, "raise() function expects only one argument: "
+                                       "type of exception: Breakpoint or EnvironmentCall")
+            return [f"return StepResult::{stmt.exc.id};"]
         else:
             raise self._fail(stmt, f"unsupported statement '{type(stmt).__name__}', expected assign or if")
 
@@ -350,7 +358,7 @@ class CppEmitter:
         self.temporary_index = 0
 
         lines = [
-                "inline Expected<void>",
+                "inline Expected<StepResult>",
                 f"runInstruction_{definition.name}_generated( CPUModel& cpu_model,",
                 " " * (27 + len(definition.name)) + "isa::InstructionBits bits)",
                 "{",
@@ -364,7 +372,7 @@ class CppEmitter:
 
         lines.extend(self._add_tabs(self._emit_statements(definition.statements)))
         lines.extend([
-            "    return Expected<void>();",
+            "    return StepResult::Continue;",
             "}"
         ])
         return lines
@@ -397,6 +405,13 @@ def generate(
         "namespace insn",
         "{",
         "",
+        "enum class StepResult",
+        "{",
+        "    Continue,",
+        "    Breakpoint,",
+        "    EnvironmentCall,",
+        "};"
+        ""
     ]
     for definition in implemented:
         lines.extend(emitter.emit_definition(definition))
@@ -404,7 +419,7 @@ def generate(
 
     lines.extend(
         [
-            "inline Expected<void>",
+            "inline Expected<StepResult>",
             "runGeneratedInstruction( CPUModel& cpu_model,",
             "                         isa::Operation operation,",
             "                         isa::InstructionBits bits)",

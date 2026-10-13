@@ -55,12 +55,12 @@ bne:
         pc = pc + 4
 
 ebreak:
-    # TODO
-    # RaiseException(Breakpoint)
+    pc = pc + 4
+    raise(Breakpoint)
 
 ecall:
-    # TODO
-    # RaiseException(EnvironmentCall)
+    pc = pc + 4
+    raise(EnvironmentCall)
 
 fence:
     # TODO

@@ -77,12 +77,12 @@ parseProgramHeader( const ELFIO::segment& segment)
 
 Expected<uint32_t>
 loadElfFile( mem::Memory& memory,
-             const std::string& elf_filename)
+             const std::string_view& elf_filename)
 {
     RVI_TRACE( "Loading ELF file: {}", elf_filename);
 
     ELFIO::elfio elf;
-    if ( !elf.load( elf_filename) )
+    if ( !elf.load( std::string( elf_filename)) )
     {
         return Error( ErrorCode::ElfOpenFailed,
                       std::format( "Error while opening ELF file {}: {}",

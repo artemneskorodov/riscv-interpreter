@@ -24,14 +24,13 @@ main( int argc,
         return static_cast<int>( riscv::ErrorCode::NoElfFileSpecified);
     }
 
-    std::string elf_filename( argv[1]);
-    std::vector<std::string_view> arguments( argv + 2, argv + argc);
+    std::vector<std::string_view> args( argv + 1, argv + argc);
 
     //
     // Loading ELF file
     //
     {
-        auto r = riscv::elf::loadElfFile( cpu_model.memory(), elf_filename);
+        auto r = riscv::elf::loadElfFile( cpu_model.memory(), args[0]);
         if ( !r.ok() )
         {
             RVI_CRITICAL( "Error while loading ELF file: {}", r.error().message);
@@ -59,13 +58,15 @@ main( int argc,
     // Loading console arguments
     //
     {
-        auto r = riscv::abi::prepareMainArguments( cpu_model, arguments);
+        auto r = riscv::abi::prepareMainArguments( cpu_model, args);
         if ( !r.ok() )
         {
             RVI_CRITICAL( "Error while preparing main arguments: {}", r.error().message);
             return static_cast<int>( r.error().error);
         }
     }
+
+    RVI_DEBUG( "State of CPU\n{}", cpu_model.toStr());
 
     //
     // Running instructions

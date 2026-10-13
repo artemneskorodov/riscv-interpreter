@@ -3,6 +3,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <string>
 
 #include "memory.hh"
 #include "debug.hh"
@@ -88,6 +89,9 @@ public:
         RVI_ASSERT( (flags & ~0x1f) == 0);
         fcsr_ |= flags;
     }
+
+public:
+    std::string toStr() const;
 
 private:
     uint32_t x_[kProgrammerRegistersNumber]{};

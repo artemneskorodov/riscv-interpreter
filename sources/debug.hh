@@ -21,10 +21,13 @@
 //
 #define RVI_INIT_SPDLOG_LEVEL ::spdlog::set_level( spdlog::level::trace)
 
+#if RVI_DEBUG_ENABLED
+
 namespace riscv
 {
 namespace debug
 {
+
 namespace detail
 {
 
@@ -68,7 +71,6 @@ memoryRangesToStr( const std::vector<std::pair<uint32_t, uint32_t>>& ranges)
 } // ! namespace debug
 } // ! namespace riscv
 
-#if RVI_DEBUG_ENABLED
     #define RVI_ASSERT( expression_)                                                               \
     do                                                                                             \
     {                                                                                              \

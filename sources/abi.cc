@@ -43,11 +43,13 @@ prepareMainArguments( CPUModel& cpu_model,
 
     uint32_t pointers_size = sizeof( uint32_t) * pointers.size();
     sp -= pointers_size;
-    sp &= ~uint32_t( 0xf); // 16-byte alignment
     cpu_model.memory().storeTrusted( sp, pointers_size, pointers.data());
+
+    uint32_t count = args.size();
+    cpu_model.memory().storeTrusted( sp, sizeof( count), &count);
+
+    RVI_DEBUG( "sp = {:#x}", sp);
     cpu_model.setX( AbiRegisterName::sp, sp);
-    cpu_model.setX( AbiRegisterName::a0, args.size());
-    cpu_model.setX( AbiRegisterName::a1, sp);
 
     return Expected<void>();
 }

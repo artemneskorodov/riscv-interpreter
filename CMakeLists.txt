@@ -48,35 +48,6 @@ add_custom_command(
 )
 
 #
-# Generating RISC-V instruction behavior from the local DSL
-#
-set(RISCV_BEHAVIOUR_SOURCES
-    "${PROJECT_SOURCE_DIR}/insns/rv32i.insn"
-    "${PROJECT_SOURCE_DIR}/insns/rv32m.insn"
-)
-set(RISCV_GENERATOR "${PROJECT_SOURCE_DIR}/insns/generate.py")
-set(RISCV_BEHAVIOUR_HEADER "${GENERATED_DIR}/riscv_behaviour.generated.hh")
-add_custom_command(
-    OUTPUT
-        "${RISCV_BEHAVIOUR_HEADER}"
-
-    COMMAND
-        "${Python3_EXECUTABLE}"
-        "${RISCV_GENERATOR}"
-        --output "${RISCV_BEHAVIOUR_HEADER}"
-        ${RISCV_BEHAVIOUR_SOURCES}
-
-    DEPENDS
-        "${RISCV_GENERATOR}"
-        ${RISCV_BEHAVIOUR_SOURCES}
-
-    COMMENT
-        "Generating RISC-V instruction behavior"
-
-    VERBATIM
-)
-
-#
 # Debug and diagnostics
 #
 add_subdirectory(3rd/spdlog)
@@ -171,6 +142,8 @@ target_sources(riscv-interpreter
         "${SOURCE_DIR}/abi.cc"
         "${SOURCE_DIR}/disasm.cc"
         "${SOURCE_DIR}/debugger.cc"
+        "${SOURCE_DIR}/insn/rv32i.cc"
+        "${SOURCE_DIR}/insn/rv32m.cc"
 
     PRIVATE
         FILE_SET HEADERS
@@ -179,7 +152,6 @@ target_sources(riscv-interpreter
             "${GENERATED_DIR}"
         FILES
             "${RISCV_ENCODING_HEADER}"
-            "${RISCV_BEHAVIOUR_HEADER}"
             "${SOURCE_DIR}/instructions.hh"
             "${SOURCE_DIR}/bits.hh"
             "${SOURCE_DIR}/cpu_model.hh"
@@ -190,6 +162,8 @@ target_sources(riscv-interpreter
             "${SOURCE_DIR}/abi.hh"
             "${SOURCE_DIR}/disasm.hh"
             "${SOURCE_DIR}/debugger.hh"
+            "${SOURCE_DIR}/insn/execute.hh"
+            "${SOURCE_DIR}/insn/helpers.hh"
 )
 target_compile_features(riscv-interpreter PRIVATE cxx_std_23)
 if(RVI_DEBUG_ENABLED)

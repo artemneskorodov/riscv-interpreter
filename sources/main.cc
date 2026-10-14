@@ -66,8 +66,6 @@ main( int argc,
         }
     }
 
-    RVI_DEBUG( "State of CPU\n{}", cpu_model.toStr());
-
     //
     // Running instructions
     //

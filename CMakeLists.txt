@@ -32,10 +32,12 @@ add_custom_command(
         -c
         rv_i
         rv32_i
+        rv_m
 
     DEPENDS
         "${RISCV_OPCODES_DIR}/extensions/rv_i"
         "${RISCV_OPCODES_DIR}/extensions/rv32_i"
+        "${RISCV_OPCODES_DIR}/extensions/rv_m"
         "${RISCV_OPCODES_DIR}/pyproject.toml"
         "${RISCV_OPCODES_DIR}/uv.lock"
 
@@ -46,27 +48,30 @@ add_custom_command(
 )
 
 #
-# Generating RV32I instruction behavior from the local DSL
+# Generating RISC-V instruction behavior from the local DSL
 #
-set(RV32I_BEHAVIOUR_SOURCE "${PROJECT_SOURCE_DIR}/insns/rv32i.insn")
-set(RV32I_GENERATOR "${PROJECT_SOURCE_DIR}/insns/generate.py")
-set(RV32I_BEHAVIOUR_HEADER "${GENERATED_DIR}/rv32i_behaviour.generated.hh")
+set(RISCV_BEHAVIOUR_SOURCES
+    "${PROJECT_SOURCE_DIR}/insns/rv32i.insn"
+    "${PROJECT_SOURCE_DIR}/insns/rv32m.insn"
+)
+set(RISCV_GENERATOR "${PROJECT_SOURCE_DIR}/insns/generate.py")
+set(RISCV_BEHAVIOUR_HEADER "${GENERATED_DIR}/riscv_behaviour.generated.hh")
 add_custom_command(
     OUTPUT
-        "${RV32I_BEHAVIOUR_HEADER}"
+        "${RISCV_BEHAVIOUR_HEADER}"
 
     COMMAND
         "${Python3_EXECUTABLE}"
-        "${RV32I_GENERATOR}"
-        "${RV32I_BEHAVIOUR_SOURCE}"
-        "${RV32I_BEHAVIOUR_HEADER}"
+        "${RISCV_GENERATOR}"
+        --output "${RISCV_BEHAVIOUR_HEADER}"
+        ${RISCV_BEHAVIOUR_SOURCES}
 
     DEPENDS
-        "${RV32I_GENERATOR}"
-        "${RV32I_BEHAVIOUR_SOURCE}"
+        "${RISCV_GENERATOR}"
+        ${RISCV_BEHAVIOUR_SOURCES}
 
     COMMENT
-        "Generating RV32I instruction behavior"
+        "Generating RISC-V instruction behavior"
 
     VERBATIM
 )
@@ -174,7 +179,7 @@ target_sources(riscv-interpreter
             "${GENERATED_DIR}"
         FILES
             "${RISCV_ENCODING_HEADER}"
-            "${RV32I_BEHAVIOUR_HEADER}"
+            "${RISCV_BEHAVIOUR_HEADER}"
             "${SOURCE_DIR}/instructions.hh"
             "${SOURCE_DIR}/bits.hh"
             "${SOURCE_DIR}/cpu_model.hh"

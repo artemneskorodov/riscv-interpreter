@@ -98,8 +98,8 @@ memoryRangesToStr( const std::vector<std::pair<uint32_t, uint32_t>>& ranges)
 
 #else // RVI_DEBUG_ENABLED
     #define RVI_ASSERT( condition) ((void)0)
-    #define RVI_UNREACHABLE()      ((void)0)
-    #define RVI_FAILURE( ...)      ((void)0)
+    #define RVI_UNREACHABLE()      ::std::abort()
+    #define RVI_FAILURE( ...)      ::std::abort()g
 #endif // RVI_DEBUG_ENABLED
 
 #endif // ! RISCV_INTERPRETER_DEBUG_HH__

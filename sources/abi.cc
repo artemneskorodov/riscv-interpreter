@@ -1,6 +1,7 @@
 #include <cstddef>
 
 #include "abi.hh"
+#include "debug.hh"
 
 namespace riscv
 {
@@ -38,16 +39,29 @@ prepareMainArguments( CPUModel& cpu_model,
         sp -= (arg.length() + 1);
         cpu_model.memory().storeTrusted( sp, arg.length(), arg.data());
         cpu_model.memory().storeTrusted( sp + arg.length(), 1, &zero);
+        RVI_DEBUG( "Argument {} is stored in [{:#x}, {:#x})", arg, sp, sp + arg.length());
         pointers.emplace_back( sp);
     }
 
+    //
+    // Loading argv[] to guest stack
+    //
     uint32_t pointers_size = sizeof( uint32_t) * pointers.size();
     sp -= pointers_size;
-    sp &= ~uint32_t( 0xf); // 16-byte alignment
     cpu_model.memory().storeTrusted( sp, pointers_size, pointers.data());
+
+    //
+    // Loading argc to guest stack
+    //
+    uint32_t count = args.size();
+    sp -= sizeof( count);
+    cpu_model.memory().storeTrusted( sp, sizeof( count), &count);
+
+    //
+    // Setting stack pointer
+    //
+    RVI_DEBUG( "sp = {:#x}", sp);
     cpu_model.setX( AbiRegisterName::sp, sp);
-    cpu_model.setX( AbiRegisterName::a0, args.size());
-    cpu_model.setX( AbiRegisterName::a1, sp);
 
     return Expected<void>();
 }

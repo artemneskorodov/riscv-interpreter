@@ -21,10 +21,13 @@
 //
 #define RVI_INIT_SPDLOG_LEVEL ::spdlog::set_level( spdlog::level::trace)
 
+#if RVI_DEBUG_ENABLED
+
 namespace riscv
 {
 namespace debug
 {
+
 namespace detail
 {
 
@@ -68,7 +71,6 @@ memoryRangesToStr( const std::vector<std::pair<uint32_t, uint32_t>>& ranges)
 } // ! namespace debug
 } // ! namespace riscv
 
-#if RVI_DEBUG_ENABLED
     #define RVI_ASSERT( expression_)                                                               \
     do                                                                                             \
     {                                                                                              \
@@ -96,8 +98,8 @@ memoryRangesToStr( const std::vector<std::pair<uint32_t, uint32_t>>& ranges)
 
 #else // RVI_DEBUG_ENABLED
     #define RVI_ASSERT( condition) ((void)0)
-    #define RVI_UNREACHABLE()      ((void)0)
-    #define RVI_FAILURE( ...)      ((void)0)
+    #define RVI_UNREACHABLE()      ::std::abort()
+    #define RVI_FAILURE( ...)      ::std::abort()
 #endif // RVI_DEBUG_ENABLED
 
 #endif // ! RISCV_INTERPRETER_DEBUG_HH__

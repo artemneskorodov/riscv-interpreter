@@ -73,16 +73,57 @@ parseProgramHeader( const ELFIO::segment& segment)
     return Allocation( true, m_offset, m_size, f_size, mem::MemoryPermissions( flags));
 }
 
+//
+// Finds symbol "__global_pointer$" in symtab.
+// We need this to implement part of code, expected to be in _start.
+// Description of corresponding linker global-pointer relaxation:
+// https://docs.riscv.org/reference/abi/v1.0/riscv-elf-linker-relaxation.html.
+//
+std::optional<uint32_t>
+findGlobalPointer( const ELFIO::elfio& elf)
+{
+    for ( const std::unique_ptr<ELFIO::section>& section_ptr : elf.sections )
+    {
+        const ELFIO::section& section = *section_ptr;
+        if ( section.get_type() != ELFIO::SHT_SYMTAB
+             && section.get_type() != ELFIO::SHT_DYNSYM )
+        {
+            continue;
+        }
+
+        const ELFIO::const_symbol_section_accessor symbols( elf, &section);
+        ELFIO::Elf64_Addr value = 0;
+        ELFIO::Elf_Xword size = 0;
+        unsigned char bind = 0;
+        unsigned char type = 0;
+        ELFIO::Elf_Half section_index = 0;
+        unsigned char other = 0;
+
+        if ( symbols.get_symbol( "__global_pointer$",
+                                 value,
+                                 size,
+                                 bind,
+                                 type,
+                                 section_index,
+                                 other) )
+        {
+            return static_cast<uint32_t>( value);
+        }
+    }
+
+    return std::nullopt;
+}
+
 } // ! anonymous namespace
 
-Expected<uint32_t>
+Expected<LoadedElf>
 loadElfFile( mem::Memory& memory,
-             const std::string& elf_filename)
+             const std::string_view& elf_filename)
 {
     RVI_TRACE( "Loading ELF file: {}", elf_filename);
 
     ELFIO::elfio elf;
-    if ( !elf.load( elf_filename) )
+    if ( !elf.load( std::string( elf_filename)) )
     {
         return Error( ErrorCode::ElfOpenFailed,
                       std::format( "Error while opening ELF file {}: {}",
@@ -143,7 +184,13 @@ loadElfFile( mem::Memory& memory,
         }
     }
 
-    return entry;
+    std::optional<uint32_t> global_pointer = findGlobalPointer( elf);
+    if ( global_pointer.has_value() )
+    {
+        RVI_DEBUG( "Got global pointer for ELF: {:#x}", global_pointer.value());
+    }
+
+    return LoadedElf{ entry, global_pointer };
 }
 
 } // ! namespace elf

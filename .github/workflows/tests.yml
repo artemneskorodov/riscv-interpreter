@@ -1,0 +1,52 @@
+name: Tests
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install CMake and Ninja
+        uses: lukka/get-cmake@v3.31.6
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10.3.0
+        with:
+          version: latest-known
+
+      - name: Install RISC-V toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes gcc-riscv64-unknown-elf
+
+      - name: Configure interpreter
+        run: >-
+          cmake
+          -S .
+          -B build
+          -G Ninja
+          -DCMAKE_BUILD_TYPE=Release
+          -DRISCV_DIAGNOSTICS_LEVEL=OFF
+          -DRISCV_DEBUGGER_MODE=OFF
+
+      - name: Build interpreter
+        run: cmake --build build --parallel
+
+      - name: Build and run interpreter tests
+        run: >-
+          make
+          -C 3rd/riscv-interpreter-tests
+          test
+          INTERPRETER="${{ github.workspace }}/build/riscv-interpreter"

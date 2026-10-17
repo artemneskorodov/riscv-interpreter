@@ -458,7 +458,7 @@ execute_fcvt_w_s( CPUModel& c,
     int_fast32_t v = f32_to_i32( toFloat( c.getF( i.rs1())), rm.value(), true);
     endFloatingPointOperation( c);
 
-    c.setX( i.rd(), std::bit_cast<uint32_t>( v));
+    c.setX( i.rd(), v);
     advancePC( c);
     return StepResult::Continue;
 }
@@ -477,7 +477,7 @@ execute_fcvt_wu_s( CPUModel& c,
     uint_fast32_t v = f32_to_ui32( toFloat( c.getF( i.rs1())), rm.value(), true);
     endFloatingPointOperation( c);
 
-    c.setX( i.rd(), std::bit_cast<uint32_t>( v));
+    c.setX( i.rd(), v);
     advancePC( c);
     return StepResult::Continue;
 }

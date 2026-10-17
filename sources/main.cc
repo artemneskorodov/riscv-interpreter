@@ -36,7 +36,13 @@ main( int argc,
             RVI_CRITICAL( "Error while loading ELF file: {}", r.error().message);
             return static_cast<int>( r.error().error);
         }
-        cpu_model.setPC(r.value());
+        const riscv::elf::LoadedElf& loaded_elf = r.value();
+        cpu_model.setPC( loaded_elf.entry);
+        if ( loaded_elf.global_pointer.has_value() )
+        {
+            cpu_model.setX( riscv::abi::AbiRegisterName::gp,
+                            loaded_elf.global_pointer.value());
+        }
     }
 
     //

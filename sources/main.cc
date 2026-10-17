@@ -24,7 +24,6 @@ main( int argc,
         RVI_CRITICAL( "No ELF file specified");
         return static_cast<int>( rvi::ErrorCode::NoElfFileSpecified);
     }
-
     std::vector<std::string_view> args( argv + 1, argv + argc);
 
     //
@@ -76,23 +75,21 @@ main( int argc,
     //
     // Running instructions
     //
-
     rvi::tools::Debugger debugger{};
-    bool call_debugger = true;
 
     for ( ; ; )
     {
-        if ( debugger.enabled() && call_debugger )
+        // Calling debugger prompt before instruction execution.
+        if ( debugger.enabled() && debugger.needPrompt( cpu_model) )
         {
-            rvi::tools::Debugger::Action action = debugger.prompt( cpu_model);
-            switch ( action )
+            bool exit = debugger.prompt( cpu_model);
+            if ( exit )
             {
-                case rvi::tools::Debugger::Action::Step:     break;
-                case rvi::tools::Debugger::Action::Continue: call_debugger = false; break;
-                case rvi::tools::Debugger::Action::Quit:     return 0;
+                return 0;
             }
         }
 
+        // Executing instruction.
         auto r = rvi::interpreter::runSingleInstruction( cpu_model);
         if ( !r.ok() )
         {
@@ -100,6 +97,7 @@ main( int argc,
             return static_cast<int>( r.error().error);
         }
 
+        // Holding post instruction actions: only exit for now.
         if ( std::holds_alternative<rvi::interpreter::Exit>( r.value()) )
         {
             int status = std::get<rvi::interpreter::Exit>( r.value()).status;

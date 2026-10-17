@@ -15,6 +15,9 @@ namespace rvi
 namespace runtime
 {
 
+//
+// Information about loaded ELF file.
+//
 struct LoadedElf
 {
     uint32_t entry;

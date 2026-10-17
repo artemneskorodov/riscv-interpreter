@@ -11,17 +11,13 @@ namespace tools
 class Debugger
 {
 public:
-    enum class Action
-    {
-        Step,
-        Continue,
-        Quit,
-    };
+    //
+    // Returns true if exiting.
+    //
+    bool prompt( CPUModel& cpu_model);
 
-    Action prompt( CPUModel& cpu_model);
-
-    constexpr bool
-    enabled() const
+    constexpr static bool
+    enabled()
     {
         #if RVI_DEBUGGER_MODE_ENABLED
         return true;
@@ -29,6 +25,26 @@ public:
         return false;
         #endif // RVI_DEBUGGER_MODE_ENABLED
     }
+
+    constexpr bool
+    needPrompt( CPUModel& c) const
+    {
+        if constexpr ( !enabled() )
+        {
+            return false;
+        }
+
+        if ( continue_enabled_ )
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+private:
+    bool continue_enabled_ = false;
+
 };
 
 } // ! namespace tools

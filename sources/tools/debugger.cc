@@ -34,7 +34,7 @@ getUint32Value( std::istringstream& input)
     return static_cast<uint32_t>( value);
 }
 
-Debugger::Action
+bool
 Debugger::prompt( CPUModel& cpu_model)
 {
     auto bits = cpu_model.memory().loadExecutable( cpu_model.getPC());
@@ -50,7 +50,7 @@ Debugger::prompt( CPUModel& cpu_model)
         std::string line;
         if ( !std::getline( std::cin, line) )
         {
-            return Action::Quit;
+            return true;
         }
 
         std::istringstream input( line);
@@ -62,13 +62,14 @@ Debugger::prompt( CPUModel& cpu_model)
             continue ;
         } else if ( command == "step" )
         {
-            return Action::Step;
+            return false;
         } else if ( command == "continue" )
         {
-            return Action::Continue;
+            continue_enabled_ = true;
+            return false;
         } else if ( command == "quit" )
         {
-            return Action::Quit;
+            return true;
         } else if ( command == "x" )
         {
             constexpr std::string_view kErrorMsg = "Usage: x <n>, where n is a number of "

@@ -33,11 +33,13 @@ add_custom_command(
         rv_i
         rv32_i
         rv_m
+        rv_f
 
     DEPENDS
         "${RISCV_OPCODES_DIR}/extensions/rv_i"
         "${RISCV_OPCODES_DIR}/extensions/rv32_i"
         "${RISCV_OPCODES_DIR}/extensions/rv_m"
+        "${RISCV_OPCODES_DIR}/extensions/rv_f"
         "${RISCV_OPCODES_DIR}/pyproject.toml"
         "${RISCV_OPCODES_DIR}/uv.lock"
 
@@ -48,10 +50,14 @@ add_custom_command(
 )
 
 #
+# Berkeley SoftFloat, using its RISC-V specialization.
+#
+include(cmake/SoftFloat.cmake)
+
+#
 # Debug and diagnostics
 #
 add_subdirectory(3rd/spdlog)
-
 set(RISCV_DIAGNOSTICS_LEVEL "DEBUG" CACHE STRING "Compile-time diagnostics level")
 set_property(
     CACHE RISCV_DIAGNOSTICS_LEVEL
@@ -144,6 +150,7 @@ target_sources(riscv-interpreter
         "${SOURCE_DIR}/debugger.cc"
         "${SOURCE_DIR}/insn/rv32i.cc"
         "${SOURCE_DIR}/insn/rv32m.cc"
+        "${SOURCE_DIR}/insn/rv32f.cc"
 
     PRIVATE
         FILE_SET HEADERS
@@ -174,7 +181,8 @@ target_link_libraries(
     PRIVATE
     spdlog::spdlog
     elfio::elfio
-    rvasm)
+    rvasm
+    softfloat)
 target_include_directories(
     riscv-interpreter
     PRIVATE

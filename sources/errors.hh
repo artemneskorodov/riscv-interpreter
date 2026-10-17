@@ -22,7 +22,7 @@ enum class ErrorCode
     ElfVersionUnexpected,
     ElfSegmentTypeUnexpected,
     ElfOpenFailed,
-    UnknownInstruction,
+    InvalidInstruction,
     UnsupportedInstruction,
     NoElfFileSpecified,
 };

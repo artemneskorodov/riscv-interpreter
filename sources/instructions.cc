@@ -4,7 +4,7 @@
 
 #include "instructions.hh"
 #include "decoder.hh"
-#include "rv32i_behaviour.generated.hh"
+#include "insn/execute.hh"
 #include "debug.hh"
 #include "abi.hh"
 
@@ -203,11 +203,11 @@ runSingleInstruction( CPUModel& cpu_model)
                    cpu_model.getPC(),
                    bits);
 
-        return Error( ErrorCode::UnknownInstruction,
+        return Error( ErrorCode::InvalidInstruction,
                       std::format( "Unknown instruction: {}", bits));
     }
 
-    auto r = runGeneratedInstruction( cpu_model, encoding->instruction, bits);
+    auto r = execute( cpu_model, bits, encoding->instruction);
     if ( !r.ok() )
     {
         RVI_DEBUG( "Error while running instruction: pc = {:#x}, bits = {:#x}, instruction = {}",

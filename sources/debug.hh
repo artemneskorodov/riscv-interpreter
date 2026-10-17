@@ -37,7 +37,6 @@ onAssertionFailed( const char* expression,
                   location.file_name(),
                   location.line(),
                   location.function_name());
-    std::abort();
 }
 
 inline void
@@ -47,7 +46,6 @@ onUnreachableReached( std::source_location location)
                   location.file_name(),
                   location.line(),
                   location.function_name());
-    std::abort();
 }
 
 } // ! namespace detail
@@ -78,6 +76,7 @@ memoryRangesToStr( const std::vector<std::pair<uint32_t, uint32_t>>& ranges)
         {                                                                                          \
             ::riscv::debug::detail::onAssertionFailed( #expression_,                               \
                                                        std::source_location::current());           \
+            std::abort();                                                                          \
         }                                                                                          \
     } while ( 0 )
 
@@ -85,6 +84,7 @@ memoryRangesToStr( const std::vector<std::pair<uint32_t, uint32_t>>& ranges)
     do                                                                                             \
     {                                                                                              \
         ::riscv::debug::detail::onUnreachableReached( std::source_location::current());            \
+        std::abort();                                                                              \
     } while ( 0 )
 
     #define RVI_FAILURE( ...)                                                                      \

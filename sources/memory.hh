@@ -21,9 +21,9 @@ class MemoryPermissions
 public:
     enum Permissions
     {
-        READ    = (1 << 0),
+        EXECUTE = (1 << 0),
         WRITE   = (1 << 1),
-        EXECUTE = (1 << 2),
+        READ    = (1 << 2),
     };
 
     MemoryPermissions( uint8_t flags)

@@ -1,0 +1,303 @@
+#include <bit>
+
+#include "insn/execute.hh"
+#include "insn/helpers.hh"
+
+namespace riscv
+{
+namespace insn
+{
+
+//
+// Logical with negative
+//
+
+namespace
+{
+
+Expected<StepResult>
+executeLogicalWithNegative( CPUModel& c,
+                            isa::Instruction i,
+                            std::function<uint32_t( uint32_t, uint32_t)> op)
+{
+    uint32_t rs1 = c.getX( i.rs1());
+    uint32_t rs2 = c.getX( i.rs2());
+
+    uint32_t result = op( rs1, ~rs2);
+
+    c.setX( i.rd(), result);
+    advancePC( c);
+    return StepResult::Continue;
+}
+
+} // ! anonymous namespace
+
+Expected<StepResult>
+execute_andn( CPUModel& c,
+              isa::Instruction i)
+{
+    auto op = []( uint32_t a, uint32_t b) { return (a & b); };
+    return executeLogicalWithNegative( c, i, op);
+}
+
+Expected<StepResult>
+execute_orn( CPUModel& c,
+             isa::Instruction i)
+{
+    auto op = []( uint32_t a, uint32_t b) { return (a | b); };
+    return executeLogicalWithNegative( c, i, op);
+}
+
+Expected<StepResult>
+execute_xnor( CPUModel& c,
+              isa::Instruction i)
+{
+    auto op = []( uint32_t a, uint32_t b) { return (a ^ b); };
+    return executeLogicalWithNegative( c, i, op);
+}
+
+//
+// Count leading/trailing zero bits
+//
+
+namespace
+{
+
+Expected<StepResult>
+executeCountZeros( CPUModel& c,
+                   isa::Instruction i,
+                   std::function<int( uint32_t)> counter)
+{
+    uint32_t value = c.getX( i.rs1());
+    int result = counter( value);
+    RVI_ASSERT( (result >= 0) && (result <= 32));
+    c.setX( i.rd(), static_cast<uint32_t>( result));
+    advancePC( c);
+    return StepResult::Continue;
+}
+
+}
+
+Expected<StepResult>
+execute_clz( CPUModel& c,
+             isa::Instruction i)
+{
+    return executeCountZeros( c, i, std::countl_zero<uint32_t>);
+}
+
+Expected<StepResult>
+execute_ctz( CPUModel& c,
+             isa::Instruction i)
+{
+    return executeCountZeros( c, i, std::countl_zero<uint32_t>);
+}
+
+//
+// Count population
+//
+
+Expected<StepResult>
+execute_cpop( CPUModel& c,
+              isa::Instruction i)
+{
+    uint32_t value = c.getX( i.rs1());
+    uint32_t result = std::popcount( value);
+    c.setX( i.rd(), result);
+    advancePC( c);
+    return StepResult::Continue;
+}
+
+//
+// Integer minimum/maximum
+//
+namespace
+{
+
+Expected<StepResult>
+executeMinMax( CPUModel& c,
+               isa::Instruction i,
+               bool is_signed,
+               bool is_minimum)
+{
+    uint32_t lhs = c.getX( i.rs1());
+    uint32_t rhs = c.getX( i.rs2());
+
+    bool is_lhs;
+    if ( is_minimum )
+    {
+        is_lhs = is_signed
+                 ? (asSigned( lhs) < asSigned( rhs))
+                 : (lhs < rhs);
+    } else
+    {
+        is_lhs = is_signed
+                 ? (asSigned( lhs) > asSigned( rhs))
+                 : (lhs > rhs);
+    }
+
+    uint32_t result = is_lhs ? lhs : rhs;
+    c.setX( i.rd(), result);
+    advancePC( c);
+    return StepResult::Continue;
+}
+
+} // ! anonymous namespace
+
+Expected<StepResult>
+execute_max( CPUModel& c,
+             isa::Instruction i)
+{
+    return executeMinMax( c, i, true, false);
+}
+
+Expected<StepResult>
+execute_maxu( CPUModel& c,
+              isa::Instruction i)
+{
+    return executeMinMax( c, i, false, false);
+}
+
+Expected<StepResult>
+execute_min( CPUModel& c,
+             isa::Instruction i)
+{
+    return executeMinMax( c, i, true, true);
+}
+
+Expected<StepResult>
+execute_minu( CPUModel& c,
+              isa::Instruction i)
+{
+    return executeMinMax( c, i, false, true);
+}
+
+//
+// Sign- and zero-extension
+//
+
+namespace
+{
+
+Expected<StepResult>
+executeSignExtent( CPUModel& c,
+                   isa::Instruction i,
+                   uint32_t width)
+{
+    uint32_t value = c.getX( i.rs1());
+    uint32_t result = bits::signExtend( value, width);
+    c.setX( i.rd(), result);
+    advancePC( c);
+    return StepResult::Continue;
+}
+
+} // ! anonymous namespace
+
+Expected<StepResult>
+execute_sext_b( CPUModel& c,
+                isa::Instruction i)
+{
+    return executeSignExtent( c, i, 8);
+}
+
+Expected<StepResult>
+execute_sext_h( CPUModel& c,
+                isa::Instruction i)
+{
+    return executeSignExtent( c, i, 16);
+}
+
+Expected<StepResult>
+execute_zext_h_rv32( CPUModel& c,
+                     isa::Instruction i)
+{
+    uint32_t value = c.getX( i.rs1());
+    uint32_t result = value & 0x0000ffff;
+    c.setX( i.rd(), result);
+    advancePC( c);
+    return StepResult::Continue;
+}
+
+//
+// Bitwise rotation
+//
+
+namespace
+{
+
+Expected<StepResult>
+executeRotate( CPUModel& c,
+               isa::Instruction i,
+               uint32_t shamt,
+               std::function<uint32_t( uint32_t, int)> rotator)
+{
+    uint32_t value = c.getX( i.rs1());
+    shamt = lowerFive( shamt);
+    uint32_t result = rotator( value, static_cast<int>( shamt));
+    c.setX( i.rd(), result);
+    advancePC( c);
+    return StepResult::Continue;
+}
+
+} // ! anonymous namespace
+
+Expected<StepResult>
+execute_rol( CPUModel& c,
+             isa::Instruction i)
+{
+    return executeRotate( c, i, c.getX( i.rs2()), std::rotl<uint32_t>);
+}
+
+Expected<StepResult>
+execute_ror( CPUModel& c,
+             isa::Instruction i)
+{
+    return executeRotate( c, i, c.getX( i.rs2()), std::rotr<uint32_t>);
+}
+
+Expected<StepResult>
+execute_rori_rv32( CPUModel& c,
+                   isa::Instruction i)
+{
+    return executeRotate( c, i, i.rs2(), std::rotr<uint32_t>);
+}
+
+//
+// OR Combine
+//
+
+Expected<StepResult>
+execute_orc_b( CPUModel& c,
+               isa::Instruction i)
+{
+    uint32_t src = c.getX( i.rs1());
+    uint32_t result = 0;
+    for ( uint32_t i = 0; i != sizeof( src) / sizeof( uint8_t); ++i )
+    {
+        uint32_t mask = 0xff << (i * 8);
+        if ( src & mask )
+        {
+            result |= (mask);
+        }
+    }
+    c.setX( i.rd(), result);
+    advancePC( c);
+    return StepResult::Continue;
+}
+
+//
+// Byte-reverse register
+//
+
+Expected<StepResult>
+execute_rev8_rv32( CPUModel& c,
+                   isa::Instruction i)
+{
+    uint32_t src = c.getX( i.rs1());
+    uint32_t result = std::byteswap( src);
+    c.setX( i.rd(), result);
+    advancePC( c);
+    return StepResult::Continue;
+}
+
+} // ! namespace insn
+} // ! namespace riscv

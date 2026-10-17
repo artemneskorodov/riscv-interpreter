@@ -34,6 +34,8 @@ add_custom_command(
         rv32_i
         rv_m
         rv_f
+        rv_zbb
+        rv32_zbb
 
     DEPENDS
         "${RISCV_OPCODES_DIR}/extensions/rv_i"
@@ -151,6 +153,7 @@ target_sources(riscv-interpreter
         "${SOURCE_DIR}/insn/rv32i.cc"
         "${SOURCE_DIR}/insn/rv32m.cc"
         "${SOURCE_DIR}/insn/rv32f.cc"
+        "${SOURCE_DIR}/insn/rv32zbb.cc"
 
     PRIVATE
         FILE_SET HEADERS

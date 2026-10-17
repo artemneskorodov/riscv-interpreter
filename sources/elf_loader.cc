@@ -125,9 +125,12 @@ loadElfFile( mem::Memory& memory,
             {
                 data_ptr = segment.get_data();
             }
-            RVI_DEBUG( "Allocating memory: [{:#x}:{:#x})",
+            RVI_DEBUG( "Allocating memory: [{:#x}:{:#x}) {}{}{}",
                        alloc.m_offset,
-                       alloc.m_offset + alloc.m_size);
+                       alloc.m_offset + alloc.m_size,
+                       alloc.permissions.Read() ? "R" : " ",
+                       alloc.permissions.Write() ? "W" : " ",
+                       alloc.permissions.Execute() ? "X" : " ");
             auto alloc_r = memory.allocate( alloc.m_offset,
                                             alloc.m_size,
                                             alloc.permissions,

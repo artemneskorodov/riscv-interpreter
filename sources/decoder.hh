@@ -73,6 +73,8 @@ public:
     InstructionBits rs1()    const { return get<15, 19>(); }
     InstructionBits rs2()    const { return get<20, 24>(); }
     InstructionBits funct7() const { return get<25, 31>(); }
+    InstructionBits rm()     const { return get<12, 14>(); }
+    InstructionBits rs3()    const { return get<27, 31>(); }
 
 public:
     template<ImmType Type,

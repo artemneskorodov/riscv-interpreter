@@ -13,3 +13,6 @@
 [submodule "3rd/riscv-disassembler"]
 	path = 3rd/riscv-disassembler
 	url = https://github.com/larkmjc/riscv-disassembler.git
+[submodule "3rd/berkeley-softfloat-3"]
+	path = 3rd/berkeley-softfloat-3
+	url = https://github.com/ucb-bar/berkeley-softfloat-3.git

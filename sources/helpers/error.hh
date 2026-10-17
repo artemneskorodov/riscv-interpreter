@@ -1,14 +1,14 @@
-#ifndef RISCV_INTERPRETER_ERRORS_HH__
-#define RISCV_INTERPRETER_ERRORS_HH__
+#ifndef RVI_HELPERS_ERROR_HH__
+#define RVI_HELPERS_ERROR_HH__
 
+#include <optional>
 #include <string>
+#include <utility>
 #include <variant>
 
-#include "spdlog/spdlog.h"
+#include "helpers/diagnostics.hh"
 
-#include "debug.hh"
-
-namespace riscv
+namespace rvi
 {
 
 enum class ErrorCode
@@ -117,6 +117,6 @@ private:
 
 };
 
-} // ! namespace riscv
+} // ! namespace rvi
 
-#endif // ! RISCV_INTERPRETER_ERRORS_HH__
+#endif // ! RVI_HELPERS_ERROR_HH__

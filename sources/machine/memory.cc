@@ -1,10 +1,10 @@
 #include <format>
 
-#include "memory.hh"
+#include "machine/memory.hh"
 
-namespace riscv
+namespace rvi
 {
-namespace mem
+namespace machine
 {
 
 Expected<void>
@@ -277,5 +277,5 @@ Memory::validateMemoryRange( uint32_t addr,
     return Expected<void>();
 }
 
-} // ! namespace mem
-} // ! namespace riscv
+} // ! namespace machine
+} // ! namespace rvi

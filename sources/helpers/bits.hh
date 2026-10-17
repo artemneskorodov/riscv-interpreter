@@ -1,11 +1,11 @@
-#ifndef RISCV_INTERPRETER_BITS_HH__
-#define RISCV_INTERPRETER_BITS_HH__
+#ifndef RVI_HELPERS_BITS_HH__
+#define RVI_HELPERS_BITS_HH__
 
 #include <concepts>
 #include <limits>
 #include <cassert>
 
-namespace riscv
+namespace rvi
 {
 namespace bits
 {
@@ -52,6 +52,6 @@ signExtend( T value,
 }
 
 } // ! namespace bits
-} // ! namespace riscv
+} // ! namespace rvi
 
-#endif // ! RISCV_INTERPRETER_BITS_HH__
+#endif // ! RVI_HELPERS_BITS_HH__

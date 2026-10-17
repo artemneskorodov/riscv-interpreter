@@ -1,10 +1,12 @@
-#ifndef RISCV_INTERPRETER_DEBUG_HH__
-#define RISCV_INTERPRETER_DEBUG_HH__
+#ifndef RVI_HELPERS_DIAGNOSTICS_HH__
+#define RVI_HELPERS_DIAGNOSTICS_HH__
 
+#include <cstddef>
+#include <cstdlib>
+#include <format>
 #include <source_location>
 #include <string>
 #include <vector>
-#include <cstddef>
 
 #include "spdlog/spdlog.h"
 
@@ -23,9 +25,9 @@
 
 #if RVI_DEBUG_ENABLED
 
-namespace riscv
+namespace rvi
 {
-namespace debug
+namespace diagnostics
 {
 
 namespace detail
@@ -68,15 +70,15 @@ memoryRangesToStr( const std::vector<std::pair<uint32_t, uint32_t>>& ranges)
     return result;
 }
 
-} // ! namespace debug
-} // ! namespace riscv
+} // ! namespace diagnostics
+} // ! namespace rvi
 
     #define RVI_ASSERT( expression_)                                                               \
     do                                                                                             \
     {                                                                                              \
         if ( !(expression_) )                                                                      \
         {                                                                                          \
-            ::riscv::debug::detail::onAssertionFailed( #expression_,                               \
+            ::rvi::diagnostics::detail::onAssertionFailed( #expression_,                         \
                                                        std::source_location::current());           \
             std::abort();                                                                          \
         }                                                                                          \
@@ -85,7 +87,7 @@ memoryRangesToStr( const std::vector<std::pair<uint32_t, uint32_t>>& ranges)
     #define RVI_UNREACHABLE()                                                                      \
     do                                                                                             \
     {                                                                                              \
-        ::riscv::debug::detail::onUnreachableReached( std::source_location::current());            \
+        ::rvi::diagnostics::detail::onUnreachableReached( std::source_location::current());      \
         std::abort();                                                                              \
     } while ( 0 )
 
@@ -102,4 +104,4 @@ memoryRangesToStr( const std::vector<std::pair<uint32_t, uint32_t>>& ranges)
     #define RVI_FAILURE( ...)      ::std::abort()
 #endif // RVI_DEBUG_ENABLED
 
-#endif // ! RISCV_INTERPRETER_DEBUG_HH__
+#endif // ! RVI_HELPERS_DIAGNOSTICS_HH__

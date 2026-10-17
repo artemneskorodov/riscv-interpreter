@@ -3,13 +3,14 @@
 #include <string>
 #include <string_view>
 
-#include "instructions.hh"
-#include "cpu_model.hh"
-#include "debug.hh"
-#include "elf_loader.hh"
-#include "errors.hh"
-#include "abi.hh"
-#include "debugger.hh"
+#include "interpreter/interpreter.hh"
+#include "isa/registers.hh"
+#include "machine/cpu.hh"
+#include "helpers/diagnostics.hh"
+#include "runtime/elf_loader.hh"
+#include "helpers/error.hh"
+#include "runtime/process.hh"
+#include "tools/debugger.hh"
 
 int
 main( int argc,
@@ -17,11 +18,11 @@ main( int argc,
 {
     RVI_INIT_SPDLOG_LEVEL;
 
-    riscv::CPUModel cpu_model{};
+    rvi::CPUModel cpu_model{};
     if ( argc < 2 )
     {
         RVI_CRITICAL( "No ELF file specified");
-        return static_cast<int>( riscv::ErrorCode::NoElfFileSpecified);
+        return static_cast<int>( rvi::ErrorCode::NoElfFileSpecified);
     }
 
     std::vector<std::string_view> args( argv + 1, argv + argc);
@@ -30,17 +31,17 @@ main( int argc,
     // Loading ELF file
     //
     {
-        auto r = riscv::elf::loadElfFile( cpu_model.memory(), args[0]);
+        auto r = rvi::runtime::loadElfFile( cpu_model.memory(), args[0]);
         if ( !r.ok() )
         {
             RVI_CRITICAL( "Error while loading ELF file: {}", r.error().message);
             return static_cast<int>( r.error().error);
         }
-        const riscv::elf::LoadedElf& loaded_elf = r.value();
+        const rvi::runtime::LoadedElf& loaded_elf = r.value();
         cpu_model.setPC( loaded_elf.entry);
         if ( loaded_elf.global_pointer.has_value() )
         {
-            cpu_model.setX( riscv::abi::AbiRegisterName::gp,
+            cpu_model.setX( rvi::isa::RegisterName::gp,
                             loaded_elf.global_pointer.value());
         }
     }
@@ -49,7 +50,7 @@ main( int argc,
     // Allocating guest stack
     //
     {
-        auto r = riscv::abi::allocateGuestStack( cpu_model.memory());
+        auto r = rvi::runtime::allocateGuestStack( cpu_model.memory());
         if ( !r.ok() )
         {
             RVI_CRITICAL( "Error while allocating guest stack: {}", r.error().message);
@@ -58,13 +59,13 @@ main( int argc,
     }
 
     RVI_DEBUG( "Commited memory ranges: {}",
-               riscv::debug::memoryRangesToStr( cpu_model.memory().getCommitedRanges()));
+               rvi::diagnostics::memoryRangesToStr( cpu_model.memory().getCommitedRanges()));
 
     //
     // Loading console arguments
     //
     {
-        auto r = riscv::abi::prepareMainArguments( cpu_model, args);
+        auto r = rvi::runtime::prepareMainArguments( cpu_model, args);
         if ( !r.ok() )
         {
             RVI_CRITICAL( "Error while preparing main arguments: {}", r.error().message);
@@ -77,7 +78,7 @@ main( int argc,
     //
 
 #if RVI_DEBUGGER_MODE_ENABLED
-    riscv::Debugger debugger{};
+    rvi::tools::Debugger debugger{};
     bool call_debugger = true;
 #endif // ! RVI_DEBUGGER_MODE_ENABLED
 
@@ -87,26 +88,26 @@ main( int argc,
 #if RVI_DEBUGGER_MODE_ENABLED
         if ( call_debugger )
         {
-            riscv::Debugger::Action action = debugger.prompt( cpu_model);
+            rvi::tools::Debugger::Action action = debugger.prompt( cpu_model);
 
             switch ( action )
             {
-                case riscv::Debugger::Action::Step:     break;
-                case riscv::Debugger::Action::Continue: call_debugger = false; break;
-                case riscv::Debugger::Action::Quit:     return 0;
+                case rvi::tools::Debugger::Action::Step:     break;
+                case rvi::tools::Debugger::Action::Continue: call_debugger = false; break;
+                case rvi::tools::Debugger::Action::Quit:     return 0;
             }
         }
 #endif // ! RVI_DEBUGGER_MODE_ENABLED
 
-        auto r = riscv::insn::runSingleInstruction( cpu_model);
+        auto r = rvi::interpreter::runSingleInstruction( cpu_model);
         if ( !r.ok() )
         {
             RVI_CRITICAL( "Error while running instruction: {}", r.error().message);
             return static_cast<int>( r.error().error);
         }
-        if ( std::holds_alternative<riscv::insn::Exit>( r.value()) )
+        if ( std::holds_alternative<rvi::interpreter::Exit>( r.value()) )
         {
-            int status = std::get<riscv::insn::Exit>( r.value()).status;
+            int status = std::get<rvi::interpreter::Exit>( r.value()).status;
             RVI_DEBUG( "Exiting from main with status = {}", status);
             return status;
         }

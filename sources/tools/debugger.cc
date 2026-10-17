@@ -1,3 +1,5 @@
+#include <algorithm>
+#include <cstdlib>
 #include <string>
 #include <iostream>
 #include <istream>
@@ -6,10 +8,12 @@
 #include <iomanip>
 #include <optional>
 
-#include "debugger.hh"
-#include "disasm.hh"
+#include "tools/debugger.hh"
+#include "tools/disassembler.hh"
 
-namespace riscv
+namespace rvi
+{
+namespace tools
 {
 
 std::optional<uint32_t>
@@ -36,7 +40,7 @@ Debugger::prompt( CPUModel& cpu_model)
     auto bits = cpu_model.memory().loadExecutable( cpu_model.getPC());
     if ( bits.ok() )
     {
-        std::cout << disasm::instrToStr( bits.value(), cpu_model.getPC()) << std::endl;
+        std::cout << instructionToString( bits.value(), cpu_model.getPC()) << std::endl;
     }
 
     for ( ; ; )
@@ -126,4 +130,5 @@ Debugger::prompt( CPUModel& cpu_model)
     }
 }
 
-} // ! namespace riscv
+} // ! namespace tools
+} // ! namespace rvi

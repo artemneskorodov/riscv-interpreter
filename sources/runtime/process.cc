@@ -1,21 +1,22 @@
 #include <cstddef>
 
-#include "abi.hh"
-#include "debug.hh"
+#include "runtime/process.hh"
+#include "isa/registers.hh"
+#include "helpers/diagnostics.hh"
 
-namespace riscv
+namespace rvi
 {
-namespace abi
+namespace runtime
 {
 
 Expected<void>
-allocateGuestStack( mem::Memory& memory,
+allocateGuestStack( machine::Memory& memory,
                     uint32_t top,
                     uint32_t size)
 {
     auto r = memory.allocate( top - size,
                               size,
-                              mem::MemoryPermissions::READ | mem::MemoryPermissions::WRITE,
+                              machine::MemoryPermissions::READ | machine::MemoryPermissions::WRITE,
                               nullptr, 0);
     if ( !r.ok() )
     {
@@ -61,10 +62,10 @@ prepareMainArguments( CPUModel& cpu_model,
     // Setting stack pointer
     //
     RVI_DEBUG( "sp = {:#x}", sp);
-    cpu_model.setX( AbiRegisterName::sp, sp);
+    cpu_model.setX( isa::RegisterName::sp, sp);
 
     return Expected<void>();
 }
 
-} // ! namespace abi
-} // ! namespace riscv
+} // ! namespace runtime
+} // ! namespace rvi

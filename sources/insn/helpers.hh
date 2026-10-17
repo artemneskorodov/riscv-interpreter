@@ -1,16 +1,16 @@
-#ifndef RISCV_INTERPRETER_INSN_HELPERS_HH__
-#define RISCV_INTERPRETER_INSN_HELPERS_HH__
+#ifndef RVI_INSN_HELPERS_HH__
+#define RVI_INSN_HELPERS_HH__
 
 #include <bit>
 #include <cstdint>
 #include <limits>
 
-#include "cpu_model.hh"
-#include "decoder.hh"
-#include "debug.hh"
-#include "bits.hh"
+#include "machine/cpu.hh"
+#include "isa/decoder.hh"
+#include "helpers/diagnostics.hh"
+#include "helpers/bits.hh"
 
-namespace riscv
+namespace rvi
 {
 namespace insn
 {
@@ -113,6 +113,6 @@ remainderSigned( uint32_t dividend,
 }
 
 } // ! namespace insn
-} // ! namespace riscv
+} // ! namespace rvi
 
-#endif // ! RISCV_INTERPRETER_INSN_HELPERS_HH__
+#endif // ! RVI_INSN_HELPERS_HH__

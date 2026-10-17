@@ -1,7 +1,7 @@
 #include <bit>
 #include <functional>
 
-#include "insn/execute.hh"
+#include "insn/dispatch.hh"
 #include "insn/helpers.hh"
 
 extern "C"
@@ -9,7 +9,7 @@ extern "C"
 #include "softfloat.h"
 }
 
-namespace riscv
+namespace rvi
 {
 namespace insn
 {
@@ -746,4 +746,4 @@ execute_fclass_s( CPUModel& c,
 }
 
 } // ! namespace insn
-} // ! namespace riscv
+} // ! namespace rvi

@@ -27,7 +27,7 @@ public:
     }
 
     constexpr bool
-    needPrompt( CPUModel& c) const
+    needPrompt( CPUModel& /*c*/) const
     {
         if constexpr ( !enabled() )
         {

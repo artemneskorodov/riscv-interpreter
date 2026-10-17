@@ -20,6 +20,15 @@ public:
 
     Action prompt( CPUModel& cpu_model);
 
+    constexpr bool
+    enabled() const
+    {
+        #if RVI_DEBUGGER_MODE_ENABLED
+        return true;
+        #else
+        return false;
+        #endif // RVI_DEBUGGER_MODE_ENABLED
+    }
 };
 
 } // ! namespace tools

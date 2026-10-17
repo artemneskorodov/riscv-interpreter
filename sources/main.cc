@@ -77,19 +77,14 @@ main( int argc,
     // Running instructions
     //
 
-#if RVI_DEBUGGER_MODE_ENABLED
     rvi::tools::Debugger debugger{};
     bool call_debugger = true;
-#endif // ! RVI_DEBUGGER_MODE_ENABLED
 
     for ( ; ; )
     {
-
-#if RVI_DEBUGGER_MODE_ENABLED
-        if ( call_debugger )
+        if ( debugger.enabled() && call_debugger )
         {
             rvi::tools::Debugger::Action action = debugger.prompt( cpu_model);
-
             switch ( action )
             {
                 case rvi::tools::Debugger::Action::Step:     break;
@@ -97,7 +92,6 @@ main( int argc,
                 case rvi::tools::Debugger::Action::Quit:     return 0;
             }
         }
-#endif // ! RVI_DEBUGGER_MODE_ENABLED
 
         auto r = rvi::interpreter::runSingleInstruction( cpu_model);
         if ( !r.ok() )
@@ -105,6 +99,7 @@ main( int argc,
             RVI_CRITICAL( "Error while running instruction: {}", r.error().message);
             return static_cast<int>( r.error().error);
         }
+
         if ( std::holds_alternative<rvi::interpreter::Exit>( r.value()) )
         {
             int status = std::get<rvi::interpreter::Exit>( r.value()).status;

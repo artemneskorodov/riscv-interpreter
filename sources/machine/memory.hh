@@ -1,5 +1,5 @@
-#ifndef RISCV_INTERPRETER_MEMORY_HH__
-#define RISCV_INTERPRETER_MEMORY_HH__
+#ifndef RVI_MACHINE_MEMORY_HH__
+#define RVI_MACHINE_MEMORY_HH__
 
 #include <cstddef>
 #include <cstdint>
@@ -9,11 +9,11 @@
 #include <concepts>
 #include <span>
 
-#include "errors.hh"
+#include "helpers/error.hh"
 
-namespace riscv
+namespace rvi
 {
-namespace mem
+namespace machine
 {
 
 class MemoryPermissions
@@ -128,7 +128,7 @@ private:
 
 };
 
-} // ! namespace mem
-} // ! namespace riscv
+} // ! namespace machine
+} // ! namespace rvi
 
-#endif // ! RISCV_INTERPRETER_MEMORY_HH__
+#endif // ! RVI_MACHINE_MEMORY_HH__

@@ -1,11 +1,11 @@
-#ifndef RISCV_INTERPRETER_INSN_EXECUTE_HH__
-#define RISCV_INTERPRETER_INSN_EXECUTE_HH__
+#ifndef RVI_INSN_DISPATCH_HH__
+#define RVI_INSN_DISPATCH_HH__
 
-#include "errors.hh"
-#include "cpu_model.hh"
-#include "decoder.hh"
+#include "helpers/error.hh"
+#include "machine/cpu.hh"
+#include "isa/decoder.hh"
 
-namespace riscv
+namespace rvi
 {
 namespace insn
 {
@@ -47,6 +47,6 @@ execute( CPUModel& cpu,
 }
 
 } // ! namespace insn
-} // ! namespace riscv
+} // ! namespace rvi
 
-#endif // ! RISCV_INTERPRETER_INSN_EXECUTE_HH__
+#endif // ! RVI_INSN_DISPATCH_HH__

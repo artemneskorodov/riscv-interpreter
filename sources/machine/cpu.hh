@@ -1,15 +1,15 @@
-#ifndef RISCV_INTERPRETER_CPU_MODEL_HH__
-#define RISCV_INTERPRETER_CPU_MODEL_HH__
+#ifndef RVI_MACHINE_CPU_HH__
+#define RVI_MACHINE_CPU_HH__
 
 #include <cstddef>
 #include <cstdint>
 #include <string>
 
-#include "memory.hh"
-#include "debug.hh"
-#include "bits.hh"
+#include "machine/memory.hh"
+#include "helpers/diagnostics.hh"
+#include "helpers/bits.hh"
 
-namespace riscv
+namespace rvi
 {
 
 class CPUModel
@@ -49,7 +49,7 @@ public:
         pc_ = value;
     }
 
-    mem::Memory&
+    machine::Memory&
     memory()
     {
         return memory_;
@@ -98,10 +98,10 @@ private:
     uint32_t f_[kFloatingPointRegistersNumber]{};
     uint32_t pc_ = 0;
     uint32_t fcsr_ = 0;
-    mem::Memory memory_;
+    machine::Memory memory_;
 
 };
 
-} // ! namespace riscv
+} // ! namespace rvi
 
-#endif // ! RISCV_INTERPRETER_CPU_MODEL_HH__
+#endif // ! RVI_MACHINE_CPU_HH__

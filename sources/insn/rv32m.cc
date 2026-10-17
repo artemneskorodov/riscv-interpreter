@@ -1,7 +1,7 @@
-#include "insn/execute.hh"
+#include "insn/dispatch.hh"
 #include "insn/helpers.hh"
 
-namespace riscv
+namespace rvi
 {
 namespace insn
 {
@@ -95,69 +95,4 @@ execute_remu( CPUModel& c,
 }
 
 } // ! namespace insn
-} // ! namespace riscv
-
-
-// Expected<StepResult>
-// execute_mul( CPUModel& cpu,
-//              isa::Instruction insn)
-// {
-//     uint64_t product = static_cast<uint64_t>( cpu.getX( insn.rs1()))
-//                        * static_cast<uint64_t>( cpu.getX( insn.rs2()));
-//     cpu.setX( insn.rd(), static_cast<uint32_t>( product));
-//     advancePC( cpu);
-//     return StepResult::Continue;
-// }
-// 
-// Expected<StepResult>
-// execute_mulh( CPUModel& cpu,
-//               isa::Instruction insn)
-// {
-//     uint32_t product = multiplyHighSigned( cpu.getX( insn.rs1()), cpu.getX( insn.rs2()));
-//     cpu.setX( insn.rd(), product);
-//     advancePC( cpu);
-//     return StepResult::Continue;
-// }
-// 
-// Expected<StepResult>
-// execute_mulhsu( CPUModel& cpu,
-//                 isa::Instruction insn)
-// {
-//     uint32_t product = multiplyHighSignedUnsigned( cpu.getX( insn.rs1()),
-//                                                    cpu.getX( insn.rs2()));
-//     cpu.setX( insn.rd(), product);
-//     advancePC( cpu);
-//     return StepResult::Continue;
-// }
-// 
-// Expected<StepResult>
-// execute_mulhu( CPUModel& cpu,
-//                isa::Instruction insn)
-// {
-//     uint32_t product = multiplyHighUnsigned( cpu.getX( insn.rs1()), cpu.getX( insn.rs2()));
-//     cpu.setX( insn.rd(), product);
-//     advancePC( cpu);
-//     return StepResult::Continue;
-// }
-
-// Expected<StepResult>
-// execute_rem( CPUModel& cpu,
-//              isa::Instruction insn)
-// {
-//     uint32_t remainder = remainderSigned( cpu.getX( insn.rs1()), cpu.getX( insn.rs2()));
-//     cpu.setX( insn.rd(), remainder);
-//     advancePC( cpu);
-//     return StepResult::Continue;
-// }
-// 
-// Expected<StepResult>
-// execute_remu( CPUModel& cpu,
-//               isa::Instruction insn)
-// {
-//     uint32_t dividend = cpu.getX( insn.rs1());
-//     uint32_t divisor = cpu.getX( insn.rs2());
-//     uint32_t remainder = divisor == 0 ? dividend : dividend % divisor;
-//     cpu.setX( insn.rd(), remainder);
-//     advancePC( cpu);
-//     return StepResult::Continue;
-// }
+} // ! namespace rvi

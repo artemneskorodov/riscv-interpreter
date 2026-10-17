@@ -1,8 +1,8 @@
-#include "insn/execute.hh"
+#include "insn/dispatch.hh"
 #include "insn/helpers.hh"
-#include "bits.hh"
+#include "helpers/bits.hh"
 
-namespace riscv
+namespace rvi
 {
 namespace insn
 {
@@ -492,4 +492,4 @@ execute_xori( CPUModel& c,
 }
 
 } // ! namespace insn
-} // ! namespace riscv
+} // ! namespace rvi

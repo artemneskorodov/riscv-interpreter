@@ -1,21 +1,21 @@
 #include <cstddef>
 #include <format>
 
-#include "disasm.hh"
+#include "tools/disassembler.hh"
 
 extern "C"
 {
 #include "riscv-disas.h"
 }
 
-namespace riscv
+namespace rvi
 {
-namespace disasm
+namespace tools
 {
 
 std::string
-instrToStr( isa::InstructionBits bits,
-            uint32_t pc)
+instructionToString( isa::InstructionBits bits,
+                     uint32_t pc)
 {
     constexpr std::size_t kMaxTextSize = 128;
     char instr_text[kMaxTextSize] = {};
@@ -24,5 +24,5 @@ instrToStr( isa::InstructionBits bits,
     return std::format( "pc={:#010x}:    {}", pc, std::string( instr_text));
 }
 
-} // ! namespace disasm
-} // ! namespace riscv
+} // ! namespace tools
+} // ! namespace rvi

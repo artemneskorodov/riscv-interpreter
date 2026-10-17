@@ -2,13 +2,13 @@
 
 #include "elfio/elfio.hpp"
 
-#include "elf_loader.hh"
-#include "errors.hh"
-#include "debug.hh"
+#include "runtime/elf_loader.hh"
+#include "helpers/error.hh"
+#include "helpers/diagnostics.hh"
 
-namespace riscv
+namespace rvi
 {
-namespace elf
+namespace runtime
 {
 
 namespace
@@ -51,7 +51,7 @@ struct Allocation
     uint32_t m_offset;
     uint32_t m_size;
     uint32_t f_size;
-    mem::MemoryPermissions permissions;
+    machine::MemoryPermissions permissions;
 };
 
 Expected<Allocation>
@@ -70,7 +70,7 @@ parseProgramHeader( const ELFIO::segment& segment)
 
     uint32_t flags = segment.get_flags();
 
-    return Allocation( true, m_offset, m_size, f_size, mem::MemoryPermissions( flags));
+    return Allocation( true, m_offset, m_size, f_size, machine::MemoryPermissions( flags));
 }
 
 //
@@ -117,7 +117,7 @@ findGlobalPointer( const ELFIO::elfio& elf)
 } // ! anonymous namespace
 
 Expected<LoadedElf>
-loadElfFile( mem::Memory& memory,
+loadElfFile( machine::Memory& memory,
              const std::string_view& elf_filename)
 {
     RVI_TRACE( "Loading ELF file: {}", elf_filename);
@@ -193,5 +193,5 @@ loadElfFile( mem::Memory& memory,
     return LoadedElf{ entry, global_pointer };
 }
 
-} // ! namespace elf
-} // ! namespace riscv
+} // ! namespace runtime
+} // ! namespace rvi

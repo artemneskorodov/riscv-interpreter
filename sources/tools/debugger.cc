@@ -1,3 +1,5 @@
+#include <algorithm>
+#include <cstdlib>
 #include <string>
 #include <iostream>
 #include <istream>
@@ -6,10 +8,12 @@
 #include <iomanip>
 #include <optional>
 
-#include "debugger.hh"
-#include "disasm.hh"
+#include "tools/debugger.hh"
+#include "tools/disassembler.hh"
 
-namespace riscv
+namespace rvi
+{
+namespace tools
 {
 
 std::optional<uint32_t>
@@ -30,13 +34,13 @@ getUint32Value( std::istringstream& input)
     return static_cast<uint32_t>( value);
 }
 
-Debugger::Action
+bool
 Debugger::prompt( CPUModel& cpu_model)
 {
     auto bits = cpu_model.memory().loadExecutable( cpu_model.getPC());
     if ( bits.ok() )
     {
-        std::cout << disasm::instrToStr( bits.value(), cpu_model.getPC()) << std::endl;
+        std::cout << instructionToString( bits.value(), cpu_model.getPC()) << std::endl;
     }
 
     for ( ; ; )
@@ -46,7 +50,7 @@ Debugger::prompt( CPUModel& cpu_model)
         std::string line;
         if ( !std::getline( std::cin, line) )
         {
-            return Action::Quit;
+            return true;
         }
 
         std::istringstream input( line);
@@ -58,13 +62,14 @@ Debugger::prompt( CPUModel& cpu_model)
             continue ;
         } else if ( command == "step" )
         {
-            return Action::Step;
+            return false;
         } else if ( command == "continue" )
         {
-            return Action::Continue;
+            continue_enabled_ = true;
+            return false;
         } else if ( command == "quit" )
         {
-            return Action::Quit;
+            return true;
         } else if ( command == "x" )
         {
             constexpr std::string_view kErrorMsg = "Usage: x <n>, where n is a number of "
@@ -126,4 +131,5 @@ Debugger::prompt( CPUModel& cpu_model)
     }
 }
 
-} // ! namespace riscv
+} // ! namespace tools
+} // ! namespace rvi

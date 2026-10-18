@@ -28,7 +28,8 @@ struct LoadedElf
 // Loads ELF file to memory.
 // Returns the initial program state described by the ELF on success.
 //
-Expected<LoadedElf> loadElfFile( machine::Memory& memory, const std::string_view& elf_filename);
+InterpreterResult<LoadedElf> loadElfFile( machine::Memory& memory,
+                                          const std::string_view& elf_filename);
 
 } // ! namespace runtime
 } // ! namespace rvi

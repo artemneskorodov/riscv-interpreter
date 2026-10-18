@@ -11,9 +11,9 @@
 namespace rvi
 {
 
-enum class ErrorCode
+enum class InterpreterErrorCode
 {
-    MemoryRegionsOverlap,
+    MemoryRegionsOverlap = 1,
     InvalidMemoryAccess,
     ElfClassUnexpected,
     ElfEncodingUnexpected,
@@ -22,18 +22,17 @@ enum class ErrorCode
     ElfVersionUnexpected,
     ElfSegmentTypeUnexpected,
     ElfOpenFailed,
-    InvalidInstruction,
-    UnsupportedInstruction,
     NoElfFileSpecified,
 };
 
-struct Error
+struct InterpreterError
 {
-    ErrorCode error;
+    InterpreterErrorCode code;
     std::string message;
 };
 
-template<typename T>
+template<typename T,
+         typename E = InterpreterError>
 class Expected
 {
 public:
@@ -41,7 +40,7 @@ public:
         : data_( std::move( value))
     {}
 
-    Expected( Error error)
+    Expected( E error)
         : data_( std::move( error))
     {}
 
@@ -63,49 +62,49 @@ public:
         return *value;
     }
 
-    Error&
+    E&
     error() &
     {
-        Error* error = std::get_if<Error>( &data_);
+        E* error = std::get_if<E>( &data_);
         RVI_ASSERT( error != nullptr);
         return *error;
     }
 
-    const Error&
+    const E&
     error() const &
     {
-        const Error* error = std::get_if<Error>( &data_);
+        const E* error = std::get_if<E>( &data_);
         RVI_ASSERT( error != nullptr);
         return *error;
     }
 
 private:
-    std::variant<T, Error> data_;
+    std::variant<T, E> data_;
 
 };
 
-template<>
-class Expected<void>
+template<typename E>
+class Expected<void, E>
 {
 public:
     Expected()
         : data_( std::nullopt)
     {}
 
-    Expected( Error error)
+    Expected( E error)
         : data_( std::move( error))
     {}
 
     bool ok() const { return !data_.has_value(); }
 
-    Error&
+    E&
     error() &
     {
         RVI_ASSERT( data_.has_value());
         return *data_;
     }
 
-    const Error&
+    const E&
     error() const &
     {
         RVI_ASSERT( data_.has_value());
@@ -113,9 +112,12 @@ public:
     }
 
 private:
-    std::optional<Error> data_;
+    std::optional<E> data_;
 
 };
+
+template<typename T>
+using InterpreterResult = Expected<T, InterpreterError>;
 
 } // ! namespace rvi
 

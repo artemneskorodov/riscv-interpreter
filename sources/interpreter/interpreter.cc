@@ -1,5 +1,3 @@
-#include <format>
-
 #include "interpreter/interpreter.hh"
 #include "insn/dispatch.hh"
 #include "isa/decoder.hh"
@@ -14,37 +12,51 @@ namespace interpreter
 namespace
 {
 
-Expected<RunAction>
+InterpreterResult<RunAction>
 handleStepResult( CPUModel& cpu_model,
-                  insn::StepResult result)
+                  insn::InstructionEffect effect)
 {
-    switch ( result )
+    if ( effect.needTrapHandler() )
     {
-        case insn::StepResult::Continue:
-            return RunAction( Continue());
-        case insn::StepResult::Breakpoint:
+        if ( effect.trapCause() == isa::ExceptionCause::UserEcall )
         {
-            RVI_FAILURE( "Breakpoint exceptions are not supported");
-        }
-        case insn::StepResult::EnvironmentCall:
-            return runtime::handleEnvironmentCall( cpu_model);
-        default:
+            InterpreterResult<RunAction> result = runtime::handleEnvironmentCall( cpu_model);
+            if ( result.ok() )
+            {
+                cpu_model.setPC( cpu_model.getPC() + sizeof( isa::InstructionBits));
+            }
+            return result;
+        } else
         {
-            RVI_UNREACHABLE();
+            return RunAction( UnhandledTrap{
+                .trap = effect.trap.value(),
+                .pc = cpu_model.getPC(),
+            });
         }
     }
+
+    if ( effect.defaultAdvancePC() )
+    {
+        cpu_model.setPC( cpu_model.getPC() + sizeof( isa::InstructionBits));
+    } else
+    {
+        cpu_model.setPC( effect.nextPC());
+    }
+
+    return RunAction( Continue());
 }
 
 } // ! anonymous namespace
 
-Expected<RunAction>
+InterpreterResult<RunAction>
 runSingleInstruction( CPUModel& cpu_model)
 {
     auto load_bits = cpu_model.memory().loadExecutable( cpu_model.getPC());
     if ( !load_bits.ok() )
     {
-        RVI_DEBUG( "Error while loading instruction: pc = {}", cpu_model.getPC());
-        return load_bits.error();
+        return handleStepResult(
+            cpu_model,
+            insn::InstructionEffect{ .trap = load_bits.error() });
     }
 
     isa::InstructionBits bits = load_bits.value();
@@ -54,22 +66,17 @@ runSingleInstruction( CPUModel& cpu_model)
         RVI_DEBUG( "Error while matching instruction: pc = {:#x}, bits = {:#x}",
                    cpu_model.getPC(),
                    bits);
-        return Error( ErrorCode::InvalidInstruction,
-                      std::format( "Unknown instruction: {}", bits));
+        insn::InstructionEffect effect = insn::InstructionEffect{
+            .trap = isa::Trap{
+                .cause = isa::ExceptionCause::IllegalInstruction,
+                .value = bits,
+            },
+        };
+        return handleStepResult( cpu_model, effect);
     }
 
-    auto execute_result = insn::execute( cpu_model, bits, encoding->instruction);
-    if ( !execute_result.ok() )
-    {
-        RVI_DEBUG( "Error while running instruction: pc = {:#x}, bits = {:#x}, "
-                   "instruction = {}",
-                   cpu_model.getPC(),
-                   bits,
-                   encoding->name);
-        return execute_result.error();
-    }
-
-    return handleStepResult( cpu_model, execute_result.value());
+    insn::InstructionEffect effect = insn::execute( cpu_model, bits, encoding->instruction);
+    return handleStepResult( cpu_model, effect);
 }
 
 } // ! namespace interpreter

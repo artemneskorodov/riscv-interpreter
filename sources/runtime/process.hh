@@ -23,16 +23,16 @@ constexpr uint32_t kDefaultStackTop = 0xc0000000;
 //
 // Allocates guest stack in memory.
 //
-Expected<void> allocateGuestStack( machine::Memory& memory,
-                                   uint32_t top = kDefaultStackTop,
-                                   uint32_t size = kDefaultStackSize);
+InterpreterResult<void> allocateGuestStack( machine::Memory& memory,
+                                            uint32_t top = kDefaultStackTop,
+                                            uint32_t size = kDefaultStackSize);
 
 //
 // Store program arguments to guest stack, creates main parameters and points sp.
 //
-Expected<void> prepareMainArguments( CPUModel& cpu_model,
-                                     const std::vector<std::string_view>& args,
-                                     uint32_t initial_sp = kDefaultStackTop);
+InterpreterResult<void> prepareMainArguments( CPUModel& cpu_model,
+                                              const std::vector<std::string_view>& args,
+                                              uint32_t initial_sp = kDefaultStackTop);
 
 } // ! namespace runtime
 } // ! namespace rvi

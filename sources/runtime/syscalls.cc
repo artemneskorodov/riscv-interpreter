@@ -22,7 +22,7 @@ enum class SupportedSyscall
     Exit = 93,
 };
 
-Expected<int>
+InterpreterResult<int>
 toHostFd( int guest_fd)
 {
     switch ( guest_fd )
@@ -37,7 +37,7 @@ toHostFd( int guest_fd)
     }
 }
 
-Expected<interpreter::RunAction>
+InterpreterResult<interpreter::RunAction>
 handleWrite( CPUModel& cpu_model)
 {
     uint32_t fd = cpu_model.getX( isa::RegisterName::a0);
@@ -63,7 +63,7 @@ handleWrite( CPUModel& cpu_model)
     return interpreter::RunAction( interpreter::Continue());
 }
 
-Expected<interpreter::RunAction>
+InterpreterResult<interpreter::RunAction>
 handleRead( CPUModel& cpu_model)
 {
     uint32_t fd = cpu_model.getX( isa::RegisterName::a0);
@@ -96,7 +96,7 @@ handleRead( CPUModel& cpu_model)
 
 } // ! anonymous namespace
 
-Expected<interpreter::RunAction>
+InterpreterResult<interpreter::RunAction>
 handleEnvironmentCall( CPUModel& cpu_model)
 {
     uint32_t number = cpu_model.getX( isa::RegisterName::a7);

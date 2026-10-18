@@ -10,6 +10,7 @@
 #include <span>
 
 #include "helpers/error.hh"
+#include "isa/cause.hh"
 
 namespace rvi
 {
@@ -59,17 +60,19 @@ struct MemoryRegion
     contains( uint32_t addr,
               uint32_t sz) const
     {
-        return (addr >= base) && (addr + sz <= base + size);
+        uint64_t access_end = static_cast<uint64_t>( addr) + sz;
+        uint64_t region_end = static_cast<uint64_t>( base) + size;
+        return (addr >= base) && (access_end <= region_end);
     }
 
     bool
     overlaps( uint32_t addr,
               uint32_t sz) const
     {
-        uint32_t this_begin = base;
-        uint32_t this_end = this_begin + size;
-        uint32_t other_begin = addr;
-        uint32_t other_end = other_begin + sz;
+        uint64_t this_begin = base;
+        uint64_t this_end = this_begin + size;
+        uint64_t other_begin = addr;
+        uint64_t other_end = other_begin + sz;
 
         return (this_begin < other_end) && (other_begin < this_end);
     }
@@ -80,33 +83,40 @@ concept MemoryAccessType = std::same_as<T, uint8_t>
                            || std::same_as<T, uint16_t>
                            || std::same_as<T, uint32_t>;
 
+template<typename T>
+using MemoryResult = Expected<T, isa::Trap>;
+
 class Memory
 {
 public:
-    Expected<void> allocate( uint32_t base,
-                             uint32_t size,
-                             MemoryPermissions permissions,
-                             const void* load,
-                             std::size_t load_size);
+    InterpreterResult<void> allocate( uint32_t base,
+                                      uint32_t size,
+                                      MemoryPermissions permissions,
+                                      const void* load,
+                                      std::size_t load_size);
 
     template<MemoryAccessType T>
-    Expected<T>
+    MemoryResult<T>
     load( uint32_t addr)
     {
         return loadImpl<T>( addr);
     }
 
-    Expected<uint32_t> loadExecutable( uint32_t addr) { return loadImpl<uint32_t>( addr, true); }
+    MemoryResult<uint32_t>
+    loadExecutable( uint32_t addr)
+    {
+        return loadImpl<uint32_t>( addr, true);
+    }
 
     template<MemoryAccessType T>
-    Expected<void>
+    MemoryResult<void>
     store( uint32_t addr, T value)
     {
         return storeImpl<T>( addr, value);
     }
 
-    Expected<void> copyFromGuest( uint32_t addr, void* dst, uint32_t size);
-    Expected<void> copyToGuest( uint32_t addr, const void* src, uint32_t size);
+    InterpreterResult<void> copyFromGuest( uint32_t addr, void* dst, uint32_t size);
+    InterpreterResult<void> copyToGuest( uint32_t addr, const void* src, uint32_t size);
 
     void loadTrusted( uint32_t addr, uint32_t size, void* data);
     void storeTrusted( uint32_t addr, uint32_t size, const void* data);
@@ -116,12 +126,18 @@ public:
 
 private:
     MemoryRegion* findRegion( uint32_t addr, uint32_t size);
+
     MemoryRegion* findRegionContaining( uint32_t addr);
-    template<MemoryAccessType T> Expected<T> loadImpl( uint32_t addr, bool executable = false);
-    template<MemoryAccessType T> Expected<void> storeImpl( uint32_t addr, T value);
-    Expected<void> validateMemoryRange( uint32_t addr,
-                                        uint32_t size,
-                                        MemoryPermissions permissions);
+
+    template<MemoryAccessType T>
+    MemoryResult<T> loadImpl( uint32_t addr, bool executable = false);
+
+    template<MemoryAccessType T>
+    MemoryResult<void> storeImpl( uint32_t addr, T value);
+
+    InterpreterResult<void> validateMemoryRange( uint32_t addr,
+                                                 uint32_t size,
+                                                 MemoryPermissions permissions);
 
 private:
     std::vector<MemoryRegion> memory_regions_;

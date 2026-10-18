@@ -7,7 +7,7 @@ namespace rvi
 namespace machine
 {
 
-Expected<void>
+InterpreterResult<void>
 Memory::allocate( uint32_t base,
                   uint32_t size,
                   MemoryPermissions permissions,
@@ -19,7 +19,7 @@ Memory::allocate( uint32_t base,
     {
         if ( region.overlaps( base, size) )
         {
-            return Error( ErrorCode::MemoryRegionsOverlap,
+            return InterpreterError( InterpreterErrorCode::MemoryRegionsOverlap,
                           std::format( "Memory regions overlap:\n"
                                        "Already created: [{}; {})\n",
                                        "Asked to allocate: [{}; {})\n",
@@ -33,7 +33,7 @@ Memory::allocate( uint32_t base,
     {
         std::memcpy( memory_regions_.back().data.get(), load, load_size);
     }
-    return Expected<void>();
+    return InterpreterResult<void>();
 }
 
 void
@@ -48,7 +48,7 @@ Memory::loadTrusted( uint32_t addr,
     std::memcpy( data, region->data.get() + addr - region->base, size);
 }
 
-Expected<void>
+InterpreterResult<void>
 Memory::copyFromGuest( uint32_t addr,
                        void* dst,
                        uint32_t size)
@@ -75,10 +75,10 @@ Memory::copyFromGuest( uint32_t addr,
         copied += piece_size;
     }
 
-    return Expected<void>();
+    return InterpreterResult<void>();
 }
 
-Expected<void>
+InterpreterResult<void>
 Memory::copyToGuest( uint32_t addr,
                      const void* src,
                      uint32_t size)
@@ -105,7 +105,7 @@ Memory::copyToGuest( uint32_t addr,
         copied += piece_size;
     }
 
-    return Expected<void>();
+    return InterpreterResult<void>();
 }
 
 void
@@ -160,31 +160,38 @@ Memory::findRegionContaining( uint32_t addr)
 }
 
 template<MemoryAccessType T>
-Expected<T>
+MemoryResult<T>
 Memory::loadImpl( uint32_t addr,
                   bool executable)
 {
+    if ( (addr % sizeof( T)) != 0 )
+    {
+        return isa::Trap{
+            .cause = executable ? isa::ExceptionCause::MisalignedFetch
+                                : isa::ExceptionCause::MisalignedLoad,
+            .value = addr,
+        };
+    }
+
     MemoryRegion* region = findRegion( addr, sizeof( T));
     if ( region == nullptr )
     {
-        return Error( ErrorCode::InvalidMemoryAccess,
-                      std::format( "Uncommited memory access: [{:#x}; {:#x})",
-                                   addr, addr + sizeof( T)));
+        return isa::Trap{
+            .cause = executable ? isa::ExceptionCause::FetchAccess
+                                : isa::ExceptionCause::LoadAccess,
+            .value = addr,
+        };
     }
 
-    if ( !region->permissions.Read() )
+    bool access_allowed = executable ? region->permissions.Execute()
+                                     : region->permissions.Read();
+    if ( !access_allowed )
     {
-        return Error( ErrorCode::InvalidMemoryAccess,
-                      std::format( "Load from memory, without read permissions: [{:#x}; {:#x})",
-                                   addr, addr + sizeof( T)));
-    }
-
-    if ( executable && !region->permissions.Execute() )
-    {
-        return Error( ErrorCode::InvalidMemoryAccess,
-                      std::format( "Load executable from memory, without execute permission: "
-                                   "[{:#x}; {:#x})",
-                                   addr, addr + sizeof( T)));
+        return isa::Trap{
+            .cause = executable ? isa::ExceptionCause::FetchAccess
+                                : isa::ExceptionCause::LoadAccess,
+            .value = addr,
+        };
     }
 
     T value{};
@@ -192,38 +199,48 @@ Memory::loadImpl( uint32_t addr,
     return value;
 }
 
-template Expected<uint8_t> Memory::loadImpl<uint8_t>( uint32_t , bool );
-template Expected<uint16_t> Memory::loadImpl<uint16_t>( uint32_t , bool );
-template Expected<uint32_t> Memory::loadImpl<uint32_t>( uint32_t , bool );
+template MemoryResult<uint8_t> Memory::loadImpl<uint8_t>( uint32_t , bool );
+template MemoryResult<uint16_t> Memory::loadImpl<uint16_t>( uint32_t , bool );
+template MemoryResult<uint32_t> Memory::loadImpl<uint32_t>( uint32_t , bool );
 
 template<MemoryAccessType T>
-Expected<void>
+MemoryResult<void>
 Memory::storeImpl( uint32_t addr, T value)
 {
+    if ( (addr % sizeof( T)) != 0 )
+    {
+        return isa::Trap{
+            .cause = isa::ExceptionCause::MisalignedStore,
+            .value = addr,
+        };
+    }
+
     MemoryRegion* region = findRegion( addr, sizeof( T));
     if ( region == nullptr )
     {
-        return Error( ErrorCode::InvalidMemoryAccess,
-                      std::format( "Uncommited memory access: [{:#x}; {:#x})",
-                                   addr, addr + sizeof( T)));
+        return isa::Trap{
+            .cause = isa::ExceptionCause::StoreAccess,
+            .value = addr,
+        };
     }
 
     if ( !region->permissions.Write() )
     {
-        return Error( ErrorCode::InvalidMemoryAccess,
-                      std::format( "Store to memory, without write permissions: [{:#x}; {:#x})",
-                                   addr, addr + sizeof( T)));
+        return isa::Trap{
+            .cause = isa::ExceptionCause::StoreAccess,
+            .value = addr,
+        };
     }
 
     std::memcpy( region->data.get() + addr - region->base, &value, sizeof( value));
-    return Expected<void>();
+    return MemoryResult<void>();
 }
 
-template Expected<void> Memory::storeImpl<uint8_t>( uint32_t , uint8_t );
-template Expected<void> Memory::storeImpl<uint16_t>( uint32_t , uint16_t );
-template Expected<void> Memory::storeImpl<uint32_t>( uint32_t , uint32_t );
+template MemoryResult<void> Memory::storeImpl<uint8_t>( uint32_t , uint8_t );
+template MemoryResult<void> Memory::storeImpl<uint16_t>( uint32_t , uint16_t );
+template MemoryResult<void> Memory::storeImpl<uint32_t>( uint32_t , uint32_t );
 
-Expected<void>
+InterpreterResult<void>
 Memory::validateMemoryRange( uint32_t addr,
                              uint32_t size,
                              MemoryPermissions permissions)
@@ -231,14 +248,14 @@ Memory::validateMemoryRange( uint32_t addr,
     uint32_t begin = addr;
     if ( static_cast<uint64_t>( size) + static_cast<uint64_t>( begin) > UINT32_MAX )
     {
-        return Error( ErrorCode::InvalidMemoryAccess,
+        return InterpreterError( InterpreterErrorCode::InvalidMemoryAccess,
                       std::format( "Memory exceeds RV32 address space: addr={:#x}, size={:#x}",
                                    addr, size));
     }
     uint32_t end = addr + size;
     if ( begin == end )
     {
-        return Expected<void>();
+        return InterpreterResult<void>();
     }
 
     while ( begin < end )
@@ -246,7 +263,7 @@ Memory::validateMemoryRange( uint32_t addr,
         const MemoryRegion* region = findRegionContaining( begin);
         if ( region == nullptr )
         {
-            return Error( ErrorCode::InvalidMemoryAccess,
+            return InterpreterError( InterpreterErrorCode::InvalidMemoryAccess,
                           std::format( "Access to uncommitted memory: [{:#x}, {:#x})",
                                        addr, addr + size));
         }
@@ -255,26 +272,26 @@ Memory::validateMemoryRange( uint32_t addr,
 
         if ( permissions.Read() && !region->permissions.Read() )
         {
-            return Error( ErrorCode::InvalidMemoryAccess,
+            return InterpreterError( InterpreterErrorCode::InvalidMemoryAccess,
                           std::format( "Read from memory without permissions: [{:#x}, {:#x})",
                                        addr, addr + size));
         }
         if ( permissions.Write() && !region->permissions.Write() )
         {
-            return Error( ErrorCode::InvalidMemoryAccess,
+            return InterpreterError( InterpreterErrorCode::InvalidMemoryAccess,
                           std::format( "Write to memory without permissions: [{:#x}, {:#x})",
                                        addr, addr + size));
         }
         if ( permissions.Execute() && !region->permissions.Execute() )
         {
-            return Error( ErrorCode::InvalidMemoryAccess,
+            return InterpreterError( InterpreterErrorCode::InvalidMemoryAccess,
                           std::format( "Access to executable memory without permissions: "
                                        "[{:#x}, {:#x})",
                                        addr, addr + size));
         }
     }
 
-    return Expected<void>();
+    return InterpreterResult<void>();
 }
 
 } // ! namespace machine

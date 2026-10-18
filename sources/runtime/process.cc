@@ -9,7 +9,7 @@ namespace rvi
 namespace runtime
 {
 
-Expected<void>
+InterpreterResult<void>
 allocateGuestStack( machine::Memory& memory,
                     uint32_t top,
                     uint32_t size)
@@ -22,10 +22,10 @@ allocateGuestStack( machine::Memory& memory,
     {
         return r.error();
     }
-    return Expected<void>();
+    return InterpreterResult<void>();
 }
 
-Expected<void>
+InterpreterResult<void>
 prepareMainArguments( CPUModel& cpu_model,
                       const std::vector<std::string_view>& args,
                       uint32_t initial_sp)
@@ -64,7 +64,7 @@ prepareMainArguments( CPUModel& cpu_model,
     RVI_DEBUG( "sp = {:#x}", sp);
     cpu_model.setX( isa::RegisterName::sp, sp);
 
-    return Expected<void>();
+    return InterpreterResult<void>();
 }
 
 } // ! namespace runtime

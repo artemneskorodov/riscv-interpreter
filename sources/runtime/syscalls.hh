@@ -10,7 +10,7 @@ namespace rvi
 namespace runtime
 {
 
-Expected<interpreter::RunAction> handleEnvironmentCall( CPUModel& cpu_model);
+InterpreterResult<interpreter::RunAction> handleEnvironmentCall( CPUModel& cpu_model);
 
 } // ! namespace runtime
 } // ! namespace rvi

@@ -3,6 +3,7 @@
 
 #include <variant>
 
+#include "isa/cause.hh"
 #include "machine/cpu.hh"
 #include "helpers/error.hh"
 
@@ -19,9 +20,15 @@ struct Exit
     int status;
 };
 
-using RunAction = std::variant<Continue, Exit>;
+struct UnhandledTrap
+{
+    isa::Trap trap;
+    uint32_t pc;
+};
 
-Expected<RunAction> runSingleInstruction( CPUModel& cpu_model);
+using RunAction = std::variant<Continue, Exit, UnhandledTrap>;
+
+InterpreterResult<RunAction> runSingleInstruction( CPUModel& cpu_model);
 
 } // ! namespace interpreter
 } // ! namespace rvi

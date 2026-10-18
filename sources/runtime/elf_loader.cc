@@ -14,32 +14,34 @@ namespace runtime
 namespace
 {
 
-Expected<uint32_t>
+InterpreterResult<uint32_t>
 parseElfHeader( const ELFIO::elfio& elf)
 {
     if ( elf.get_class() != ELFIO::ELFCLASS32 )
     {
-        return Error( ErrorCode::ElfClassUnexpected, "Expected only 32-bit ELFs");
+        return InterpreterError( InterpreterErrorCode::ElfClassUnexpected,
+                                 "Expected only 32-bit ELFs");
     }
     if ( elf.get_encoding() != ELFIO::ELFDATA2LSB )
     {
-        return Error( ErrorCode::ElfEncodingUnexpected, "Expected only LSB encoding");
+        return InterpreterError( InterpreterErrorCode::ElfEncodingUnexpected,
+                                 "Expected only LSB encoding");
     }
     if ( elf.get_machine() != ELFIO::EM_RISCV )
     {
-        return Error( ErrorCode::ElfMachineUnexpected,
-                      std::format( "Unexpected machine: {}, only EM_RISCV is supported",
-                                   elf.get_machine()));
+        return InterpreterError( InterpreterErrorCode::ElfMachineUnexpected,
+                                 std::format( "Unexpected machine: {}, only EM_RISCV is supported",
+                                              elf.get_machine()));
     }
     if ( elf.get_type() != ELFIO::ET_EXEC )
     {
-        return Error( ErrorCode::ElfTypeUnexpected,
-                      "Unexpected ELF type: only ET_EXEC is supported");
+        return InterpreterError( InterpreterErrorCode::ElfTypeUnexpected,
+                                 "Unexpected ELF type: only ET_EXEC is supported");
     }
     if ( elf.get_version() != ELFIO::EV_CURRENT )
     {
-        return Error( ErrorCode::ElfVersionUnexpected,
-                      "Only EV_CURRENT ELF version is supported");
+        return InterpreterError( InterpreterErrorCode::ElfVersionUnexpected,
+                                 "Only EV_CURRENT ELF version is supported");
     }
 
     return elf.get_entry();
@@ -54,7 +56,7 @@ struct Allocation
     machine::MemoryPermissions permissions;
 };
 
-Expected<Allocation>
+InterpreterResult<Allocation>
 parseProgramHeader( const ELFIO::segment& segment)
 {
     if ( segment.get_type() != ELFIO::PT_LOAD )
@@ -116,7 +118,7 @@ findGlobalPointer( const ELFIO::elfio& elf)
 
 } // ! anonymous namespace
 
-Expected<LoadedElf>
+InterpreterResult<LoadedElf>
 loadElfFile( machine::Memory& memory,
              const std::string_view& elf_filename)
 {
@@ -125,10 +127,10 @@ loadElfFile( machine::Memory& memory,
     ELFIO::elfio elf;
     if ( !elf.load( std::string( elf_filename)) )
     {
-        return Error( ErrorCode::ElfOpenFailed,
-                      std::format( "Error while opening ELF file {}: {}",
-                      elf_filename,
-                      std::strerror( errno)));
+        return InterpreterError( InterpreterErrorCode::ElfOpenFailed,
+                                 std::format( "Error while opening ELF file {}: {}",
+                                              elf_filename,
+                                              std::strerror( errno)));
     }
 
     //
@@ -166,12 +168,14 @@ loadElfFile( machine::Memory& memory,
             {
                 data_ptr = segment.get_data();
             }
+
             RVI_DEBUG( "Allocating memory: [{:#x}:{:#x}) {}{}{}",
                        alloc.m_offset,
                        alloc.m_offset + alloc.m_size,
                        alloc.permissions.Read() ? "R" : " ",
                        alloc.permissions.Write() ? "W" : " ",
                        alloc.permissions.Execute() ? "X" : " ");
+
             auto alloc_r = memory.allocate( alloc.m_offset,
                                             alloc.m_size,
                                             alloc.permissions,

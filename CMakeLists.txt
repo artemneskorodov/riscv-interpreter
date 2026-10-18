@@ -95,6 +95,7 @@ target_sources(riscv-interpreter
             "${RISCV_ENCODING_HEADER}"
             "${SOURCE_DIR}/insn/dispatch.hh"
             "${SOURCE_DIR}/insn/helpers.hh"
+            "${SOURCE_DIR}/isa/cause.hh"
             "${SOURCE_DIR}/isa/decoder.hh"
             "${SOURCE_DIR}/isa/instruction.hh"
             "${SOURCE_DIR}/isa/registers.hh"

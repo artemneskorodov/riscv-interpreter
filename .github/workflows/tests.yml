@@ -38,8 +38,8 @@ jobs:
           -B build
           -G Ninja
           -DCMAKE_BUILD_TYPE=Release
-          -DRISCV_DIAGNOSTICS_LEVEL=OFF
-          -DRISCV_DEBUGGER_MODE=OFF
+          -DRVI_DIAGNOSTICS_LEVEL=OFF
+          -DRVI_DEBUGGER_MODE=OFF
 
       - name: Build interpreter
         run: cmake --build build --parallel

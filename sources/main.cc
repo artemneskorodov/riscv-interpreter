@@ -1,15 +1,41 @@
 #include <iostream>
+#include <cstdlib>
+#include <format>
 #include <vector>
 #include <string>
 #include <string_view>
 
-#include "instructions.hh"
-#include "cpu_model.hh"
-#include "debug.hh"
-#include "elf_loader.hh"
-#include "errors.hh"
-#include "abi.hh"
-#include "debugger.hh"
+#include "interpreter/interpreter.hh"
+#include "isa/registers.hh"
+#include "machine/cpu.hh"
+#include "helpers/diagnostics.hh"
+#include "runtime/elf_loader.hh"
+#include "helpers/error.hh"
+#include "runtime/process.hh"
+#include "tools/debugger.hh"
+
+namespace
+{
+
+int
+reportInterpreterError( std::string_view context,
+                        const rvi::InterpreterError& error)
+{
+    std::cerr << std::format( "Interpreter error {}: {}\n", context, error.message);
+    return static_cast<int>( error.code);
+}
+
+int
+reportGuestTrap( const rvi::interpreter::UnhandledTrap& trapped)
+{
+    std::cerr << std::format( "Guest trap: {} at pc={:#x}, value={:#x}\n",
+                              rvi::isa::causeToStr( trapped.trap.cause),
+                              trapped.pc,
+                              trapped.trap.value);
+    return EXIT_FAILURE;
+}
+
+} // ! anonymous namespace
 
 int
 main( int argc,
@@ -17,30 +43,28 @@ main( int argc,
 {
     RVI_INIT_SPDLOG_LEVEL;
 
-    riscv::CPUModel cpu_model{};
+    rvi::CPUModel cpu_model{};
     if ( argc < 2 )
     {
-        RVI_CRITICAL( "No ELF file specified");
-        return static_cast<int>( riscv::ErrorCode::NoElfFileSpecified);
+        std::cerr << "Interpreter error: no ELF file specified\n";
+        return static_cast<int>( rvi::InterpreterErrorCode::NoElfFileSpecified);
     }
-
     std::vector<std::string_view> args( argv + 1, argv + argc);
 
     //
     // Loading ELF file
     //
     {
-        auto r = riscv::elf::loadElfFile( cpu_model.memory(), args[0]);
+        auto r = rvi::runtime::loadElfFile( cpu_model.memory(), args[0]);
         if ( !r.ok() )
         {
-            RVI_CRITICAL( "Error while loading ELF file: {}", r.error().message);
-            return static_cast<int>( r.error().error);
+            return reportInterpreterError( "while loading ELF file", r.error());
         }
-        const riscv::elf::LoadedElf& loaded_elf = r.value();
+        const rvi::runtime::LoadedElf& loaded_elf = r.value();
         cpu_model.setPC( loaded_elf.entry);
         if ( loaded_elf.global_pointer.has_value() )
         {
-            cpu_model.setX( riscv::abi::AbiRegisterName::gp,
+            cpu_model.setX( rvi::isa::RegisterName::gp,
                             loaded_elf.global_pointer.value());
         }
     }
@@ -49,64 +73,58 @@ main( int argc,
     // Allocating guest stack
     //
     {
-        auto r = riscv::abi::allocateGuestStack( cpu_model.memory());
+        auto r = rvi::runtime::allocateGuestStack( cpu_model.memory());
         if ( !r.ok() )
         {
-            RVI_CRITICAL( "Error while allocating guest stack: {}", r.error().message);
-            return static_cast<int>( r.error().error);
+            return reportInterpreterError( "while allocating guest stack", r.error());
         }
     }
 
     RVI_DEBUG( "Commited memory ranges: {}",
-               riscv::debug::memoryRangesToStr( cpu_model.memory().getCommitedRanges()));
+               rvi::diagnostics::memoryRangesToStr( cpu_model.memory().getCommitedRanges()));
 
     //
     // Loading console arguments
     //
     {
-        auto r = riscv::abi::prepareMainArguments( cpu_model, args);
+        auto r = rvi::runtime::prepareMainArguments( cpu_model, args);
         if ( !r.ok() )
         {
-            RVI_CRITICAL( "Error while preparing main arguments: {}", r.error().message);
-            return static_cast<int>( r.error().error);
+            return reportInterpreterError( "while preparing main arguments", r.error());
         }
     }
 
     //
     // Running instructions
     //
-
-#if RVI_DEBUGGER_MODE_ENABLED
-    riscv::Debugger debugger{};
-    bool call_debugger = true;
-#endif // ! RVI_DEBUGGER_MODE_ENABLED
+    rvi::tools::Debugger debugger{};
 
     for ( ; ; )
     {
-
-#if RVI_DEBUGGER_MODE_ENABLED
-        if ( call_debugger )
+        // Calling debugger prompt before instruction execution.
+        if ( debugger.enabled() && debugger.needPrompt( cpu_model) )
         {
-            riscv::Debugger::Action action = debugger.prompt( cpu_model);
-
-            switch ( action )
+            bool exit = debugger.prompt( cpu_model);
+            if ( exit )
             {
-                case riscv::Debugger::Action::Step:     break;
-                case riscv::Debugger::Action::Continue: call_debugger = false; break;
-                case riscv::Debugger::Action::Quit:     return 0;
+                return 0;
             }
         }
-#endif // ! RVI_DEBUGGER_MODE_ENABLED
 
-        auto r = riscv::insn::runSingleInstruction( cpu_model);
+        // Executing instruction.
+        auto r = rvi::interpreter::runSingleInstruction( cpu_model);
         if ( !r.ok() )
         {
-            RVI_CRITICAL( "Error while running instruction: {}", r.error().message);
-            return static_cast<int>( r.error().error);
+            return reportInterpreterError( "while running instruction", r.error());
         }
-        if ( std::holds_alternative<riscv::insn::Exit>( r.value()) )
+
+        if ( std::holds_alternative<rvi::interpreter::UnhandledTrap>( r.value()) )
         {
-            int status = std::get<riscv::insn::Exit>( r.value()).status;
+            const auto& trapped = std::get<rvi::interpreter::UnhandledTrap>( r.value());
+            return reportGuestTrap( trapped);
+        } else if ( std::holds_alternative<rvi::interpreter::Exit>( r.value()) )
+        {
+            int status = std::get<rvi::interpreter::Exit>( r.value()).status;
             RVI_DEBUG( "Exiting from main with status = {}", status);
             return status;
         }

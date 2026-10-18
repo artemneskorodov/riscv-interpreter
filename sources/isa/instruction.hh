@@ -1,50 +1,14 @@
-#ifndef RISCV_INTERPRETER_DECODER_HH__
-#define RISCV_INTERPRETER_DECODER_HH__
+#ifndef RVI_ISA_INSTRUCTION_HH__
+#define RVI_ISA_INSTRUCTION_HH__
 
 #include <cstdint>
-#include <optional>
-#include <string_view>
 
-#include "bits.hh"
+#include "helpers/bits.hh"
 
-namespace riscv
+namespace rvi
 {
 namespace isa
 {
-
-enum class Operation
-{
-    #define DECLARE_INSN(name_, match_, mask_) instr_ ## name_,
-    #include "riscv-opcodes/encoding.out.h"
-    #undef DECLARE_INSN
-};
-
-struct InstructionEncoding
-{
-    Operation instruction;
-    uint32_t match;
-    uint32_t mask;
-    std::string_view name;
-};
-
-constexpr InstructionEncoding kEncodings[] = {
-    #define DECLARE_INSN(name_, match_, mask_) { Operation::instr_ ## name_, match_, mask_, #name_},
-    #include "riscv-opcodes/encoding.out.h"
-    #undef DECLARE_INSN
-};
-
-inline constexpr std::optional<InstructionEncoding>
-matchInstruction( uint32_t instr)
-{
-    for ( const InstructionEncoding& encoding : kEncodings )
-    {
-        if ( (instr & encoding.mask) == encoding.match )
-        {
-            return encoding;
-        }
-    }
-    return std::nullopt;
-}
 
 enum class ImmType
 {
@@ -103,7 +67,8 @@ public:
             InstructionBits imm_10_5 = get<25, 30>();
             InstructionBits imm_4_1 = get<8, 11>();
             InstructionBits imm_11 = get<7, 7>();
-            imm_value = (imm_12 << 12) | (imm_10_5 << 5) | (imm_4_1 << 1) | (imm_11 << 11);
+            imm_value = (imm_12 << 12) | (imm_10_5 << 5) | (imm_4_1 << 1)
+                        | (imm_11 << 11);
             width = 13;
         } else if constexpr ( Type == ImmType::U )
         {
@@ -115,7 +80,8 @@ public:
             InstructionBits imm_10_1 = get<21, 30>();
             InstructionBits imm_11 = get<20, 20>();
             InstructionBits imm_19_12 = get<12, 19>();
-            imm_value = (imm_20 << 20) | (imm_10_1 << 1) | (imm_11 << 11) | (imm_19_12 << 12);
+            imm_value = (imm_20 << 20) | (imm_10_1 << 1) | (imm_11 << 11)
+                        | (imm_19_12 << 12);
             width = 21;
         } else
         {
@@ -141,10 +107,9 @@ private:
 
 private:
     InstructionBits bits_;
-
 };
 
 } // ! namespace isa
-} // ! namespace riscv
+} // ! namespace rvi
 
-#endif // ! RISCV_INTERPRETER_DECODER_HH__
+#endif // ! RVI_ISA_INSTRUCTION_HH__

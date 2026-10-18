@@ -1,30 +1,31 @@
 #include <cstddef>
 
-#include "abi.hh"
-#include "debug.hh"
+#include "runtime/process.hh"
+#include "isa/registers.hh"
+#include "helpers/diagnostics.hh"
 
-namespace riscv
+namespace rvi
 {
-namespace abi
+namespace runtime
 {
 
-Expected<void>
-allocateGuestStack( mem::Memory& memory,
+InterpreterResult<void>
+allocateGuestStack( machine::Memory& memory,
                     uint32_t top,
                     uint32_t size)
 {
     auto r = memory.allocate( top - size,
                               size,
-                              mem::MemoryPermissions::READ | mem::MemoryPermissions::WRITE,
+                              machine::MemoryPermissions::READ | machine::MemoryPermissions::WRITE,
                               nullptr, 0);
     if ( !r.ok() )
     {
         return r.error();
     }
-    return Expected<void>();
+    return InterpreterResult<void>();
 }
 
-Expected<void>
+InterpreterResult<void>
 prepareMainArguments( CPUModel& cpu_model,
                       const std::vector<std::string_view>& args,
                       uint32_t initial_sp)
@@ -44,27 +45,25 @@ prepareMainArguments( CPUModel& cpu_model,
     }
 
     //
-    // Loading argv[] to guest stack
+    // Loading argc and argv[] to guest stack together.
+    // The resulting sp must be 16-byte aligned as RISCV expects.
     //
     uint32_t pointers_size = sizeof( uint32_t) * pointers.size();
-    sp -= pointers_size;
-    cpu_model.memory().storeTrusted( sp, pointers_size, pointers.data());
+    uint32_t argc = args.size();
 
-    //
-    // Loading argc to guest stack
-    //
-    uint32_t count = args.size();
-    sp -= sizeof( count);
-    cpu_model.memory().storeTrusted( sp, sizeof( count), &count);
+    sp -= (pointers_size + sizeof( argc));
+    sp &= ~0xf;
+    cpu_model.memory().storeTrusted( sp, sizeof( argc), &argc);
+    cpu_model.memory().storeTrusted( sp + sizeof( argc), pointers_size, pointers.data());
 
     //
     // Setting stack pointer
     //
     RVI_DEBUG( "sp = {:#x}", sp);
-    cpu_model.setX( AbiRegisterName::sp, sp);
+    cpu_model.setX( isa::RegisterName::sp, sp);
 
-    return Expected<void>();
+    return InterpreterResult<void>();
 }
 
-} // ! namespace abi
-} // ! namespace riscv
+} // ! namespace runtime
+} // ! namespace rvi

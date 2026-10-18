@@ -1,7 +1,8 @@
 #include <bit>
 #include <functional>
+#include <optional>
 
-#include "insn/execute.hh"
+#include "insn/dispatch.hh"
 #include "insn/helpers.hh"
 
 extern "C"
@@ -9,7 +10,7 @@ extern "C"
 #include "softfloat.h"
 }
 
-namespace riscv
+namespace rvi
 {
 namespace insn
 {
@@ -67,7 +68,7 @@ getFCSR( uint32_t frm,
     return fflags | (frm << 5);
 }
 
-Expected<uint8_t>
+std::optional<uint8_t>
 resolveRoundingMode( const CPUModel& cpu,
                      isa::Instruction insn)
 {
@@ -79,8 +80,7 @@ resolveRoundingMode( const CPUModel& cpu,
         return toSoftFloatRoundingMode( getFRM( cpu.getFCSR()));
     }
 
-    return Error( ErrorCode::InvalidInstruction,
-                  std::format( "Unknown rounding mode: {}", insn.rm()));
+    return std::nullopt;
 }
 
 void
@@ -118,15 +118,20 @@ endFloatingPointOperation( CPUModel& c)
 }
 
 template<typename Operation>
-Expected<StepResult>
+InstructionEffect
 executeFloatingPointOperation( CPUModel& c,
                                isa::Instruction i,
                                Operation operation)
 {
-    Expected<uint8_t> rm = resolveRoundingMode( c, i);
-    if ( !rm.ok() )
+    std::optional<uint8_t> rm = resolveRoundingMode( c, i);
+    if ( !rm.has_value() )
     {
-        return rm.error();
+        return InstructionEffect{
+            .trap = isa::Trap{
+                .cause = isa::ExceptionCause::IllegalInstruction,
+                .value = i.bits(),
+            },
+        };
     }
 
     beginFloatingPointOperation( rm.value());
@@ -134,8 +139,8 @@ executeFloatingPointOperation( CPUModel& c,
     endFloatingPointOperation( c);
 
     c.setF( i.rd(), result.v);
-    advancePC( c);
-    return StepResult::Continue;
+
+    return {};
 }
 
 } // ! anonymous namespace
@@ -147,7 +152,7 @@ executeFloatingPointOperation( CPUModel& c,
 namespace
 {
 
-Expected<StepResult>
+InstructionEffect
 executeComputingInsn( CPUModel& c,
                       isa::Instruction i,
                       std::function<float32_t( float32_t, float32_t)> f)
@@ -161,28 +166,28 @@ executeComputingInsn( CPUModel& c,
 
 } // ! anonymous namespace
 
-Expected<StepResult>
+InstructionEffect
 execute_fadd_s( CPUModel& c,
                 isa::Instruction i)
 {
     return executeComputingInsn( c, i, f32_add);
 }
 
-Expected<StepResult>
+InstructionEffect
 execute_fsub_s( CPUModel& c,
                 isa::Instruction i)
 {
     return executeComputingInsn( c, i, f32_sub);
 }
 
-Expected<StepResult>
+InstructionEffect
 execute_fmul_s( CPUModel& c,
                 isa::Instruction i)
 {
     return executeComputingInsn( c, i, f32_mul);
 }
 
-Expected<StepResult>
+InstructionEffect
 execute_fdiv_s( CPUModel& c,
                 isa::Instruction i)
 {
@@ -193,7 +198,7 @@ execute_fdiv_s( CPUModel& c,
 // Square root
 //
 
-Expected<StepResult>
+InstructionEffect
 execute_fsqrt_s( CPUModel& c,
                  isa::Instruction i)
 {
@@ -208,7 +213,7 @@ execute_fsqrt_s( CPUModel& c,
 namespace
 {
 
-Expected<StepResult>
+InstructionEffect
 executeFusedMulAdd( CPUModel& c,
                     isa::Instruction i,
                     bool mul_neg,
@@ -228,28 +233,28 @@ executeFusedMulAdd( CPUModel& c,
 
 } // ! anonymous namespace
 
-Expected<StepResult>
+InstructionEffect
 execute_fmadd_s( CPUModel& c,
                  isa::Instruction i)
 {
     return executeFusedMulAdd( c, i, false, false);
 }
 
-Expected<StepResult>
+InstructionEffect
 execute_fmsub_s( CPUModel& c,
                  isa::Instruction i)
 {
     return executeFusedMulAdd( c, i, false, true);
 }
 
-Expected<StepResult>
+InstructionEffect
 execute_fnmsub_s( CPUModel& c,
                   isa::Instruction i)
 {
     return executeFusedMulAdd( c, i, true, false);
 }
 
-Expected<StepResult>
+InstructionEffect
 execute_fnmadd_s( CPUModel& c,
                   isa::Instruction i)
 {
@@ -263,7 +268,7 @@ execute_fnmadd_s( CPUModel& c,
 namespace
 {
 
-Expected<StepResult>
+InstructionEffect
 executeSignChangeInsn( CPUModel& c,
                        isa::Instruction i,
                        std::function<uint32_t( uint32_t, uint32_t)> sign)
@@ -276,13 +281,12 @@ executeSignChangeInsn( CPUModel& c,
     uint32_t result = sign_bit | except_sign_bit;
 
     c.setF( i.rd(), result);
-    advancePC( c);
-    return StepResult::Continue;
+    return {};
 }
 
 } // ! anonymous namespace
 
-Expected<StepResult>
+InstructionEffect
 execute_fsgnj_s( CPUModel& c,
                  isa::Instruction i)
 {
@@ -290,7 +294,7 @@ execute_fsgnj_s( CPUModel& c,
     return executeSignChangeInsn( c, i, sign);
 }
 
-Expected<StepResult>
+InstructionEffect
 execute_fsgnjn_s( CPUModel& c,
                   isa::Instruction i)
 {
@@ -298,7 +302,7 @@ execute_fsgnjn_s( CPUModel& c,
     return executeSignChangeInsn( c, i, sign);
 }
 
-Expected<StepResult>
+InstructionEffect
 execute_fsgnjx_s( CPUModel& c,
                   isa::Instruction i)
 {
@@ -313,7 +317,7 @@ execute_fsgnjx_s( CPUModel& c,
 namespace
 {
 
-Expected<StepResult>
+InstructionEffect
 executeChangeRoundingMode( CPUModel& c,
                            isa::Instruction i,
                            uint32_t rm)
@@ -322,11 +326,11 @@ executeChangeRoundingMode( CPUModel& c,
     uint32_t old_fcsr_flags = getFFlags( c.getFCSR());
     c.setX( i.rd(), getFRM( c.getFCSR()));
     c.setFCSR( getFCSR( new_fcsr_rm, old_fcsr_flags));
-    advancePC( c);
-    return StepResult::Continue;
+
+    return {};
 }
 
-Expected<StepResult>
+InstructionEffect
 executeChangeFlags( CPUModel& c,
                     isa::Instruction i,
                     uint32_t flags)
@@ -335,72 +339,67 @@ executeChangeFlags( CPUModel& c,
     uint32_t old_fcsr_rm = getFRM( c.getFCSR());
     c.setX( i.rd(), getFFlags( c.getFCSR()));
     c.setFCSR( getFCSR( old_fcsr_rm, new_fcsr_flags));
-    advancePC( c);
-    return StepResult::Continue;
+    return {};
 }
 
 } // ! anonymous namespace
 
-Expected<StepResult>
+InstructionEffect
 execute_frcsr( CPUModel& c,
                isa::Instruction i)
 {
     c.setX( i.rd(), c.getFCSR());
-    advancePC( c);
-    return StepResult::Continue;
+    return {};
 }
 
-Expected<StepResult>
+InstructionEffect
 execute_fscsr( CPUModel& c,
                isa::Instruction i)
 {
     uint32_t new_fcsr = c.getX( i.rs1());
     c.setX( i.rd(), c.getFCSR());
     c.setFCSR( new_fcsr);
-    advancePC( c);
-    return StepResult::Continue;
+    return {};
 }
 
-Expected<StepResult>
+InstructionEffect
 execute_frrm( CPUModel& c,
               isa::Instruction i)
 {
     c.setX( i.rd(), getFRM( c.getFCSR()));
-    advancePC( c);
-    return StepResult::Continue;
+    return{};
 }
 
-Expected<StepResult>
+InstructionEffect
 execute_fsrm( CPUModel& c,
               isa::Instruction i)
 {
     return executeChangeRoundingMode( c, i, c.getX( i.rs1()));
 }
 
-Expected<StepResult>
+InstructionEffect
 execute_fsrmi( CPUModel& c,
                isa::Instruction i)
 {
     return executeChangeRoundingMode( c, i, i.rs1());
 }
 
-Expected<StepResult>
+InstructionEffect
 execute_frflags( CPUModel& c,
                  isa::Instruction i)
 {
     c.setX( i.rd(), getFFlags( c.getFCSR()));
-    advancePC( c);
-    return StepResult::Continue;
+    return {};
 }
 
-Expected<StepResult>
+InstructionEffect
 execute_fsflags( CPUModel& c,
                  isa::Instruction i)
 {
     return executeChangeFlags( c, i, c.getX( i.rs1()));
 }
 
-Expected<StepResult>
+InstructionEffect
 execute_fsflagsi( CPUModel& c,
                   isa::Instruction i)
 {
@@ -411,47 +410,51 @@ execute_fsflagsi( CPUModel& c,
 // Floating point load and store instructions
 //
 
-Expected<StepResult>
+InstructionEffect
 execute_flw( CPUModel& c,
              isa::Instruction i)
 {
     uint32_t addr = c.getX( i.rs1()) + i.imm<isa::ImmType::I, true>();
-    Expected<uint32_t> value = c.memory().load<uint32_t>( addr);
+    machine::MemoryResult<uint32_t> value = c.memory().load<uint32_t>( addr);
     if ( !value.ok() )
     {
-        return value.error();
+        return InstructionEffect{ .trap = value.error() };
     }
     c.setF( i.rd(), value.value());
-    advancePC( c);
-    return StepResult::Continue;
+    return {};
 }
 
-Expected<StepResult>
+InstructionEffect
 execute_fsw( CPUModel& c,
              isa::Instruction i)
 {
     uint32_t addr = c.getX( i.rs1()) + i.imm<isa::ImmType::I, true>();
     uint32_t value = c.getF( i.rs2());
-    Expected<void> r = c.memory().store<uint32_t>( addr, value);
+    machine::MemoryResult<void> r = c.memory().store<uint32_t>( addr, value);
     if ( !r.ok() )
     {
-        return r.error();
+        return InstructionEffect{ .trap = r.error() };
     }
-    return StepResult::Continue;
+    return {};
 }
 
 //
 // Converters instructions
 //
 
-Expected<StepResult>
+InstructionEffect
 execute_fcvt_w_s( CPUModel& c,
                   isa::Instruction i)
 {
-    Expected<uint8_t> rm = resolveRoundingMode( c, i);
-    if ( !rm.ok() )
+    std::optional<uint8_t> rm = resolveRoundingMode( c, i);
+    if ( !rm.has_value() )
     {
-        return rm.error();
+        return InstructionEffect{
+            .trap = isa::Trap{
+                .cause = isa::ExceptionCause::IllegalInstruction,
+                .value = i.bits(),
+            },
+        };
     }
 
     beginFloatingPointOperation( rm.value());
@@ -459,18 +462,22 @@ execute_fcvt_w_s( CPUModel& c,
     endFloatingPointOperation( c);
 
     c.setX( i.rd(), v);
-    advancePC( c);
-    return StepResult::Continue;
+    return {};
 }
 
-Expected<StepResult>
+InstructionEffect
 execute_fcvt_wu_s( CPUModel& c,
                    isa::Instruction i)
 {
-    Expected<uint8_t> rm = resolveRoundingMode( c, i);
-    if ( !rm.ok() )
+    std::optional<uint8_t> rm = resolveRoundingMode( c, i);
+    if ( !rm.has_value() )
     {
-        return rm.error();
+        return InstructionEffect{
+            .trap = isa::Trap{
+                .cause = isa::ExceptionCause::IllegalInstruction,
+                .value = i.bits(),
+            },
+        };
     }
 
     beginFloatingPointOperation( rm.value());
@@ -478,11 +485,10 @@ execute_fcvt_wu_s( CPUModel& c,
     endFloatingPointOperation( c);
 
     c.setX( i.rd(), v);
-    advancePC( c);
-    return StepResult::Continue;
+    return {};
 }
 
-Expected<StepResult>
+InstructionEffect
 execute_fcvt_s_w( CPUModel& c,
                   isa::Instruction i)
 {
@@ -490,7 +496,7 @@ execute_fcvt_s_w( CPUModel& c,
     return executeFloatingPointOperation( c, i, op);
 }
 
-Expected<StepResult>
+InstructionEffect
 execute_fcvt_s_wu( CPUModel& c,
                    isa::Instruction i)
 {
@@ -502,22 +508,20 @@ execute_fcvt_s_wu( CPUModel& c,
 // Moving to x-registers instructions
 //
 
-Expected<StepResult>
+InstructionEffect
 execute_fmv_x_w( CPUModel& c,
                  isa::Instruction i)
 {
     c.setX( i.rd(), c.getF( i.rs1()));
-    advancePC( c);
-    return StepResult::Continue;
+    return {};
 }
 
-Expected<StepResult>
+InstructionEffect
 execute_fmv_w_x( CPUModel& c,
                  isa::Instruction i)
 {
     c.setF( i.rd(), c.getX( i.rs1()));
-    advancePC( c);
-    return StepResult::Continue;
+    return {};
 }
 
 //
@@ -526,7 +530,7 @@ execute_fmv_w_x( CPUModel& c,
 namespace
 {
 
-Expected<StepResult>
+InstructionEffect
 executeCmpInsn( CPUModel& c,
                 isa::Instruction i,
                 std::function<bool( float32_t, float32_t)> comparator)
@@ -536,27 +540,26 @@ executeCmpInsn( CPUModel& c,
                               toFloat( c.getF( i.rs2())));
     endFloatingPointOperation( c);
     c.setX( i.rd(), result ? 1u : 0u);
-    advancePC( c);
-    return StepResult::Continue;
+    return {};
 }
 
 } // ! anonymous namespace
 
-Expected<StepResult>
+InstructionEffect
 execute_feq_s( CPUModel& c,
                isa::Instruction i)
 {
     return executeCmpInsn( c, i, f32_eq);
 }
 
-Expected<StepResult>
+InstructionEffect
 execute_fle_s( CPUModel& c,
                isa::Instruction i)
 {
     return executeCmpInsn( c, i, f32_le);
 }
 
-Expected<StepResult>
+InstructionEffect
 execute_flt_s( CPUModel& c,
                isa::Instruction i)
 {
@@ -652,24 +655,22 @@ minimumMaximum( CPUModel& c,
 
 } // ! anonymous namespace
 
-Expected<StepResult>
+InstructionEffect
 execute_fmax_s( CPUModel& c,
                 isa::Instruction i)
 {
     uint32_t result = minimumMaximum( c, c.getF( i.rs1()), c.getF( i.rs2()), false);
     c.setF( i.rd(), result);
-    advancePC( c);
-    return StepResult::Continue;
+    return {};
 }
 
-Expected<StepResult>
+InstructionEffect
 execute_fmin_s( CPUModel& c,
                 isa::Instruction i)
 {
     uint32_t result = minimumMaximum( c, c.getF( i.rs1()), c.getF( i.rs2()), true);
     c.setF( i.rd(), result);
-    advancePC( c);
-    return StepResult::Continue;
+    return {};
 }
 
 //
@@ -736,14 +737,13 @@ classify( uint32_t value)
 
 } // ! anonymous namespace
 
-Expected<StepResult>
+InstructionEffect
 execute_fclass_s( CPUModel& c,
                   isa::Instruction i)
 {
     c.setX( i.rd(), classify( c.getF( i.rs1())));
-    advancePC( c);
-    return StepResult::Continue;
+    return {};
 }
 
 } // ! namespace insn
-} // ! namespace riscv
+} // ! namespace rvi

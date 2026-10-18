@@ -45,18 +45,16 @@ prepareMainArguments( CPUModel& cpu_model,
     }
 
     //
-    // Loading argv[] to guest stack
+    // Loading argc and argv[] to guest stack together.
+    // The resulting sp must be 16-byte aligned as RISCV expects.
     //
     uint32_t pointers_size = sizeof( uint32_t) * pointers.size();
-    sp -= pointers_size;
-    cpu_model.memory().storeTrusted( sp, pointers_size, pointers.data());
+    uint32_t argc = args.size();
 
-    //
-    // Loading argc to guest stack
-    //
-    uint32_t count = args.size();
-    sp -= sizeof( count);
-    cpu_model.memory().storeTrusted( sp, sizeof( count), &count);
+    sp -= (pointers_size + sizeof( argc));
+    sp &= ~0xf;
+    cpu_model.memory().storeTrusted( sp, sizeof( argc), &argc);
+    cpu_model.memory().storeTrusted( sp + sizeof( argc), pointers_size, pointers.data());
 
     //
     // Setting stack pointer
